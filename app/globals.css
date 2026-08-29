@@ -1,26 +1,296 @@
 @import "tailwindcss";
 
+/* ── DaktariScribe Design Tokens ──────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand Colors — extracted from DaktariScribe-Full-Logo.png */
+  --ds-navy-950:  #060f1a;
+  --ds-navy-900:  #0d2240;
+  --ds-navy-800:  #1a3a5c;
+  --ds-navy-700:  #1e4a75;
+  --ds-navy-600:  #265d92;
+  --ds-navy-100:  #dbeeff;
+  --ds-teal-600:  #00956e;
+  --ds-teal-500:  #00b896;
+  --ds-teal-400:  #2ab5a0;
+  --ds-teal-300:  #4dd9c0;
+  --ds-teal-200:  #a8f0e6;
+  --ds-teal-100:  #e0faf5;
+
+  /* Surface */
+  --ds-surface:       #f0f7f6;
+  --ds-surface-alt:   #ffffff;
+  --ds-surface-card:  #ffffff;
+  --ds-on-surface:    #0d2240;
+  --ds-on-surface-v:  #3d5a73;
+
+  /* Background */
+  --background: #f0f7f6;
+  --foreground: #0d2240;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base Reset ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
+
+/* ── Glass Card ───────────────────────────────────────────── */
+.glass-card {
+  background: rgba(13, 34, 64, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 32px rgba(6, 15, 26, 0.18);
+  transition: transform 0.28s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.glass-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(77, 217, 192, 0.22);
+  background: rgba(13, 34, 64, 0.65);
+}
+
+/* ── Hero Background ──────────────────────────────────────── */
+.hero-bg {
+  background-image:
+    linear-gradient(135deg, rgba(13, 34, 64, 0.88) 0%, rgba(0, 185, 150, 0.72) 100%),
+    url('/assets/Hero-section.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-blend-mode: multiply;
+}
+
+/* ── Primary Gradient ─────────────────────────────────────── */
+.primary-gradient {
+  background: linear-gradient(135deg, #0d2240 0%, #00b896 100%);
+}
+
+/* ── Name Gradient (teal text) ────────────────────────────── */
+.name-gradient {
+  background: linear-gradient(90deg, #4dd9c0 0%, #00b896 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+
+/* ── Teal CTA Button ──────────────────────────────────────── */
+.btn-ds-primary {
+  background: linear-gradient(135deg, #0d2240 0%, #00b896 100%);
+  color: #ffffff;
+  padding: 1rem 1.5rem;
+  border-radius: 0.875rem;
+  font-weight: 700;
+  font-size: 15px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: filter 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 185, 150, 0.25);
+  border: none;
+  cursor: pointer;
+}
+.btn-ds-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 12px 32px rgba(0, 185, 150, 0.35);
+}
+.btn-ds-primary:active {
+  transform: scale(0.985);
+}
+
+/* ── Form Input ───────────────────────────────────────────── */
+.ds-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #d0e8e4;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem 0.875rem 3rem;
+  font-size: 15px;
+  color: #0d2240;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 52px;
+}
+.ds-input:focus {
+  border-color: #00b896;
+  box-shadow: 0 0 0 3px rgba(0, 185, 150, 0.15);
+}
+.ds-input::placeholder {
+  color: #8fafc0;
+}
+
+/* ── Divider ──────────────────────────────────────────────── */
+.ds-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.ds-divider::before,
+.ds-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #d0e8e4;
+}
+.ds-divider span {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #8fafc0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Pulse Animation (recording indicator) ────────────────── */
+@keyframes ds-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0, 185, 150, 0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(0, 185, 150, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(0, 185, 150, 0); }
+}
+.ds-pulse { animation: ds-pulse 2s infinite; }
+
+/* ── Wave Animation (spectrum bars) ──────────────────────── */
+@keyframes ds-wave {
+  0%, 100% { transform: scaleY(0.45); }
+  50%       { transform: scaleY(1.55); }
+}
+.ds-wave-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 9999px;
+  background: #4dd9c0;
+  animation: ds-wave 1.2s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* ── Shimmer / Skeleton ───────────────────────────────────── */
+@keyframes ds-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ── Scroll-fade-in ───────────────────────────────────────── */
+@keyframes ds-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ds-fade-up {
+  animation: ds-fade-up 0.55s ease both;
+}
+
+/* ── Material Symbols ─────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ── Registration Form Input ────────────────────────────── */
+.reg-input {
+  width: 100%;
+  background: #f0f7f6;
+  border: 1px solid #d0e8e4;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  font-size: 15px;
+  color: #0d2240;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 52px;
+}
+.reg-input:focus {
+  border-color: #00b896;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 185, 150, 0.15);
+}
+.reg-input::placeholder {
+  color: #8fafc0;
+}
+
+/* ── Legal Page Prose ─────────────────────────────────────── */
+.legal-prose h2 {
+  color: #0d2240;
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-top: 2.25rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0f0ed;
+}
+.legal-prose h3 {
+  color: #1a3a5c;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-top: 1.4rem;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.legal-prose p {
+  color: #3d5a73;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  margin-bottom: 0.9rem;
+}
+.legal-prose ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0.9rem;
+}
+.legal-prose ul li {
+  color: #3d5a73;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  padding-left: 1.4rem;
+  position: relative;
+  margin-bottom: 0.3rem;
+}
+.legal-prose ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00b896;
+}
+.legal-prose strong {
+  color: #0d2240;
+  font-weight: 700;
+}
+.legal-prose a {
+  color: #00b896;
+  font-weight: 600;
+  text-decoration: none;
+}
+.legal-prose a:hover {
+  text-decoration: underline;
+}
+.legal-prose .section-intro {
+  background: linear-gradient(135deg, rgba(13,34,64,0.04) 0%, rgba(0,185,150,0.06) 100%);
+  border-left: 3px solid #00b896;
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1.5rem;
+  color: #1a3a5c;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
