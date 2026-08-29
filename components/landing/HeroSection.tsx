@@ -61,8 +61,9 @@ export default function HeroSection() {
         w-full lg:w-1/2
         relative overflow-hidden
         flex flex-col justify-center
-        px-8 lg:px-14 py-10
-        min-h-screen
+        px-6 sm:px-8 lg:px-14
+        py-10 lg:py-14
+        min-h-[60vh] lg:min-h-screen
       "
       aria-label="DaktariScribe brand and features"
     >
@@ -125,7 +126,7 @@ export default function HeroSection() {
 
         {/* H1 Heading */}
         <h1
-          className="font-black text-white leading-[1.15] drop-shadow-md tracking-tight text-3xl xl:text-4xl ds-fade-up"
+          className="font-black text-white leading-[1.15] drop-shadow-md tracking-tight text-2xl sm:text-3xl xl:text-4xl ds-fade-up"
           style={{ animationDelay: "160ms" }}
         >
           Voice-Powered &amp; Text{" "}
@@ -144,8 +145,8 @@ export default function HeroSection() {
           offline, at the speed of care.
         </p>
 
-        {/* 2 × 2 Feature Bento Grid */}
-        <div className="grid grid-cols-2 gap-3 mt-1">
+        {/* 2 × 2 Feature Bento Grid — 1-col on very small screens, 2-col on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
           {FEATURES.map((feat) => (
             <FeatureCard key={feat.icon} {...feat} />
           ))}
@@ -153,7 +154,7 @@ export default function HeroSection() {
 
         {/* Trust badges */}
         <div
-          className="flex items-center gap-4 mt-2 ds-fade-up"
+          className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 ds-fade-up"
           style={{ animationDelay: "500ms" }}
         >
           {[

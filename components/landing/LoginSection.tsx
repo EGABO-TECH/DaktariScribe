@@ -45,8 +45,8 @@ export default function LoginSection() {
         w-full lg:w-1/2
         bg-[#f0f7f6]
         flex items-center justify-center
-        relative px-6 py-8
-        min-h-screen
+        relative px-4 sm:px-6 py-10 lg:py-0
+        lg:min-h-screen
         overflow-hidden
       "
       aria-label="Sign in to DaktariScribe"

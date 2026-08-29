@@ -18,7 +18,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef6f5] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#eef6f5] flex items-start sm:items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
       <div className="w-full max-w-[480px]">
 
         {/* ── Card ── */}
@@ -26,7 +26,7 @@ export default function RegisterPage() {
 
           {/* ══ HEADER BANNER ══ */}
           <div
-            className="relative flex flex-col items-center text-center px-8 pt-10 pb-9 overflow-hidden"
+            className="relative flex flex-col items-center text-center px-6 sm:px-8 pt-8 sm:pt-10 pb-7 sm:pb-9 overflow-hidden"
             style={{
               background: "linear-gradient(145deg, #0d2240 0%, #1a3a5c 60%, #00956e 100%)",
             }}
@@ -54,7 +54,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Titles */}
-            <h1 className="relative z-10 text-white font-extrabold text-[22px] leading-tight tracking-tight mb-1">
+            <h1 className="relative z-10 text-white font-extrabold text-[19px] sm:text-[22px] leading-tight tracking-tight mb-1">
               DaktariScribe Pharma Network
             </h1>
             <p className="relative z-10 text-[#a8f0e6] text-[13px] font-medium mb-3">
@@ -68,7 +68,7 @@ export default function RegisterPage() {
           </div>
 
           {/* ══ FORM BODY ══ */}
-          <form onSubmit={handleSubmit} noValidate className="px-8 py-8 space-y-7">
+          <form onSubmit={handleSubmit} noValidate className="px-5 sm:px-8 py-7 sm:py-8 space-y-7">
 
             {/* ── Section: Primary Identity ── */}
             <div>

@@ -3,24 +3,23 @@ import LoginSection from "@/components/landing/LoginSection";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 /**
- * DaktariScribe Landing Page — Desktop View
+ * DaktariScribe Landing Page
  *
- * Layout: full-viewport split screen
- *   Left  (50%) — Hero / brand narrative + feature grid (dark, navy/teal gradient over hero photo)
- *   Right (50%) — Login card (light teal surface)
+ * Mobile / Tablet  — stacked single column: Hero → Login
+ * Desktop (lg+)    — full-viewport split screen, side by side
  *
- * The entire page is min-h-screen with flex-col so the footer
- * always sits at the bottom.
+ * The page is min-h-screen with flex-col so the footer sits at the bottom.
+ * On mobile the two sections stack naturally without forcing 200 vh of scroll.
  */
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* ── Main Split ── */}
       <main className="flex flex-grow flex-col lg:flex-row">
-        {/* LEFT — Brand + Features */}
+        {/* LEFT / TOP — Brand + Features */}
         <HeroSection />
 
-        {/* RIGHT — Sign In */}
+        {/* RIGHT / BOTTOM — Sign In */}
         <LoginSection />
       </main>
 

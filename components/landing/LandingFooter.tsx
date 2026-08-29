@@ -11,7 +11,7 @@ export default function LandingFooter() {
   return (
     <footer
       className="
-        w-full px-8 md:px-12 py-5
+        w-full px-5 sm:px-8 md:px-12 py-5
         flex flex-col md:flex-row justify-between items-center gap-3
         bg-white border-t border-[#d0e8e4]
       "
@@ -37,11 +37,11 @@ export default function LandingFooter() {
 
       {/* Copyright */}
       <p className="text-[10px] uppercase tracking-widest text-[#8fafc0] text-center max-w-xs">
-        © 2026 DaktariScribe Clinical Pharma Network. All rights reserved.
+        &copy; 2026 DaktariScribe Clinical Pharma Network. All rights reserved.
       </p>
 
       {/* Links */}
-      <nav aria-label="Footer links" className="flex flex-row gap-6 flex-shrink-0">
+      <nav aria-label="Footer links" className="flex flex-row flex-wrap justify-center gap-x-5 gap-y-2 flex-shrink-0">
         {FOOTER_LINKS.map(({ label, href }) => (
           <Link
             key={label}
