@@ -199,7 +199,7 @@ export default function LoginSection() {
                   Password
                 </label>
                 <Link
-                  href="#"
+                  href="/forgot-password"
                   className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#00b896] hover:underline"
                 >
                   Forgot?
