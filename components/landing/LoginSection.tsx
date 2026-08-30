@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useSignIn } from "@clerk/nextjs/legacy";
+import { useRouter } from "next/navigation";
 
 /** Google "G" SVG logo */
 function GoogleLogo() {
@@ -31,12 +33,48 @@ function GoogleLogo() {
 export default function LoginSection() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleGoogleSSO = () => {
+    if (!isLoaded) return;
+    signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/field-entry",
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoaded) return;
+    
     setIsLoading(true);
-    // Simulate async action
-    setTimeout(() => setIsLoading(false), 1800);
+    setError("");
+
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/field-entry");
+      } else {
+        console.log(result);
+        setError("Additional verification steps are required.");
+      }
+    } catch (err: any) {
+      console.error("error", err.errors[0].longMessage);
+      setError(err.errors[0].longMessage || "Failed to sign in. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -93,6 +131,7 @@ export default function LoginSection() {
           <button
             id="google-sso-btn"
             type="button"
+            onClick={handleGoogleSSO}
             className="
               w-full flex items-center justify-center gap-3
               bg-white border border-[#d0e8e4]
@@ -115,6 +154,13 @@ export default function LoginSection() {
 
           {/* Sign-In Form */}
           <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+            
+            {error && (
+              <div className="p-3 bg-error/10 border border-error/20 text-error rounded-lg text-sm text-center">
+                {error}
+              </div>
+            )}
+
             {/* Email */}
             <div className="space-y-1.5">
               <label
@@ -136,6 +182,8 @@ export default function LoginSection() {
                   autoComplete="email"
                   placeholder="name@gmail.com"
                   className="ds-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -170,6 +218,8 @@ export default function LoginSection() {
                   autoComplete="current-password"
                   placeholder="••••••••"
                   className="ds-input pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <button
@@ -193,7 +243,7 @@ export default function LoginSection() {
             <button
               id="signin-submit"
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !isLoaded}
               className="btn-ds-primary mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? (
