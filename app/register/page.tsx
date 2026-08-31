@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSignUp } from "@clerk/nextjs/legacy";
+import { useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -101,6 +101,15 @@ export default function RegisterPage() {
               }}
               aria-hidden="true"
             />
+
+            {/* Back to Login — top-left */}
+            <Link
+              href="/"
+              className="absolute top-4 left-4 z-20 flex items-center gap-1 text-white/60 hover:text-white text-[11px] font-semibold tracking-wide uppercase transition-colors"
+            >
+              <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+              Login
+            </Link>
 
             {/* Logo tile */}
             <div className="relative z-10 bg-white rounded-2xl p-3 shadow-lg mb-5 w-20 h-20 flex items-center justify-center">
@@ -387,16 +396,18 @@ export default function RegisterPage() {
                       className="sr-only peer"
                       required
                     />
-                    {/* Custom checkbox face */}
+                    {/* Custom checkbox face — clicking this label toggles the hidden input */}
                     <div
-                      className="
-                        w-5 h-5 rounded-md border-2 border-[#d0e8e4]
-                        bg-white peer-checked:bg-[#0d2240] peer-checked:border-[#0d2240]
-                        group-hover:border-[#00b896]
-                        transition-all duration-200
-                        flex items-center justify-center
-                      "
-                      onClick={() => setAgreedToTerms((v) => !v)}
+                      role="checkbox"
+                      aria-checked={agreedToTerms}
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') setAgreedToTerms(v => !v); }}
+                      onClick={() => setAgreedToTerms(v => !v)}
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-150 ${
+                        agreedToTerms
+                          ? 'bg-[#0d2240] border-[#0d2240]'
+                          : 'bg-white border-[#d0e8e4] group-hover:border-[#00b896]'
+                      }`}
                       aria-hidden="true"
                     >
                       {agreedToTerms && (
