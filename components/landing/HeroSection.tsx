@@ -129,10 +129,10 @@ export default function HeroSection() {
           className="font-black text-white leading-[1.15] drop-shadow-md tracking-tight text-2xl sm:text-3xl xl:text-4xl ds-fade-up"
           style={{ animationDelay: "160ms" }}
         >
-          Voice-Powered &amp; Text{" "}
+          AI-Powered Voice &amp; Text{" "}
           <span className="name-gradient">Medical Scribe</span>
           <br />
-          for Frontline Healthcare Workers
+          for Frontline Healthcare Workers and Field Medics
           <span className="text-[#4dd9c0]">.</span>
         </h1>
 
@@ -141,8 +141,7 @@ export default function HeroSection() {
           className="text-white/72 text-[15px] leading-relaxed max-w-md -mt-1 ds-fade-up"
           style={{ animationDelay: "220ms" }}
         >
-          Capture, synthesise, and report clinical encounters — in the field,
-          offline, at the speed of care.
+          Capture, synthesise, and report clinical encounters in the field with minimal internet connectivity, at the speed of care.
         </p>
 
         {/* 2 × 2 Feature Bento Grid — 1-col on very small screens, 2-col on sm+ */}
