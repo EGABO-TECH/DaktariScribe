@@ -189,25 +189,59 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file in the root of the project:
+Create a `.env.local` file in the root of the project. See the comments in the file for where to obtain each key:
 
 ```env
-# Clerk Authentication — get these from your Clerk Dashboard
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Clerk Redirect URLs
+# ── Clerk Authentication ──────────────────────────────────────
+# https://clerk.com → Your App → API Keys
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/register
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/field-entry
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/field-entry
-```
 
-> **How to get your Clerk keys:**
-> 1. Sign up at [clerk.com](https://clerk.com/)
-> 2. Create a new application
-> 3. Enable **Email/Password** and **Google OAuth** sign-in methods
-> 4. Copy your Publishable Key and Secret Key from the **API Keys** section
+# ── Speech-to-Text / Audio Transcription ─────────────────────
+# OpenAI Whisper (recommended): https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-...
+# Google Cloud STT v2: https://console.cloud.google.com
+GOOGLE_CLOUD_STT_API_KEY=AIza...
+# AssemblyAI (medical vocab + speaker diarization): https://assemblyai.com
+ASSEMBLYAI_API_KEY=...
+
+# ── AI Text Analysis & NLP Synthesis ─────────────────────────
+# Anthropic Claude: https://console.anthropic.com/keys
+ANTHROPIC_API_KEY=sk-ant-...
+# Google Gemini: https://aistudio.google.com/app/apikey
+GOOGLE_GEMINI_API_KEY=AIza...
+# Active provider: "openai" | "anthropic" | "gemini"
+AI_MODEL_PROVIDER=openai
+AI_MODEL_NAME=gpt-4o
+
+# ── OCR – Optical Character Recognition ──────────────────────
+# Google Vision API: https://console.cloud.google.com → Vision API
+GOOGLE_VISION_API_KEY=AIza...
+# Azure AI Vision: https://portal.azure.com → Cognitive Services
+AZURE_VISION_API_KEY=...
+AZURE_VISION_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+
+# ── PDF Generation ───────────────────────────────────────────
+# Current default: browser window.print() — no key needed
+# PDFShift (server-side): https://pdfshift.io/
+PDFSHIFT_API_KEY=sk_...
+ENABLE_SERVER_SIDE_PDF=false
+
+# ── File Storage (audio uploads & PDFs) ──────────────────────
+# Cloudflare R2: https://dash.cloudflare.com → R2
+CLOUDFLARE_R2_ACCESS_KEY_ID=...
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=...
+CLOUDFLARE_R2_BUCKET_NAME=daktariscribe-audio
+CLOUDFLARE_R2_ENDPOINT=https://...r2.cloudflarestorage.com
+
+# ── App ──────────────────────────────────────────────────────
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NODE_ENV=development
+```
 
 ### 4. Run the Development Server
 
