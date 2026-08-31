@@ -41,13 +41,23 @@ export default function LegalPageLayout({
               DaktariScribe
             </span>
           </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-[12px] font-semibold text-[#3d5a73] hover:text-[#00b896] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-            <span className="hidden sm:inline">Back to Home</span>
-          </Link>
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/register"
+              className="flex items-center gap-1.5 text-[12px] font-semibold text-[#00b896] hover:text-[#0d2240] border border-[#d0e8e4] hover:border-[#0d2240] px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <span className="material-symbols-outlined text-[15px]">how_to_reg</span>
+              <span className="hidden sm:inline">Back to Register</span>
+            </Link>
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 text-[12px] font-semibold text-[#3d5a73] hover:text-[#00b896] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span className="hidden sm:inline">Back to Home</span>
+            </Link>
+          </div>
         </div>
       </nav>
 

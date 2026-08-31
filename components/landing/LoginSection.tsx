@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs/legacy";
+import { useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 /** Google "G" SVG logo */
@@ -40,19 +40,17 @@ export default function LoginSection() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
 
-  const handleGoogleSSO = () => {
+  const handleGoogleSSO = async () => {
     if (!isLoaded) return;
-    signIn.authenticateWithRedirect({
-        strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/field-entry",
+    await signIn.authenticateWithRedirect({
+      strategy: "oauth_google",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoaded) return;
-    
+
     setIsLoading(true);
     setError("");
 
@@ -66,12 +64,13 @@ export default function LoginSection() {
         await setActive({ session: result.createdSessionId });
         router.push("/field-entry");
       } else {
-        console.log(result);
+        // Handle incomplete sign-in (requires 2FA, etc.)
         setError("Additional verification steps are required.");
       }
     } catch (err: any) {
-      console.error("error", err.errors[0].longMessage);
-      setError(err.errors[0].longMessage || "Failed to sign in. Please check your credentials.");
+      // Better error handling
+      const errorMessage = err.errors?.[0]?.longMessage || err.message || "Failed to sign in. Please check your credentials.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

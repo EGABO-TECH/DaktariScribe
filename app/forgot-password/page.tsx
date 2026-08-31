@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs/legacy";
+import { useSignIn } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const { signIn } = useSignIn();
+  const { isLoaded } = useAuth();
+  const clerk = useClerk();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -23,10 +26,14 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
+      // For password reset, we need to identify the user first
       await signIn.create({
-        strategy: "reset_password_email_code",
         identifier: email,
       });
+
+      // Then prepare the email reset
+      await signIn.prepareEmailAddressVerification({ strategy: "email_code" });
+
       setSuccessfulCreation(true);
     } catch (err: any) {
       setError(err.errors?.[0]?.longMessage || "Failed to initiate password reset");
@@ -35,26 +42,35 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const resetPassword = async (e: React.FormEvent) => {
+  const resetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isLoaded) return;
     setIsLoading(true);
     setError("");
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "reset_password_email_code",
+      // Step 1: Verify the email code
+      await signIn.attemptEmailAddressVerification({
         code,
+      });
+
+      // Step 2: Authenticate with the email and new password
+      const result = await signIn.create({
+        identifier: email,
         password,
       });
 
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+        // Step 3: Set the active session
+        await clerk.setActive({ session: result.createdSessionId });
         router.push("/field-entry");
       } else {
-        setError("Password reset incomplete. Please check your code.");
+        // Handle incomplete sign-in (shouldn't happen in this flow usually)
+        setError("Additional verification steps are required.");
       }
     } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || "Failed to reset password");
+      // Better error handling
+      const errorMessage = err.errors?.[0]?.longMessage || err.message || "Failed to reset password";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +119,7 @@ export default function ForgotPasswordPage() {
                   {error}
                 </div>
               )}
-              
+
               <div>
                 <label
                   htmlFor="reset-email"
@@ -169,7 +185,7 @@ export default function ForgotPasswordPage() {
                   {error}
                 </div>
               )}
-              
+
               <div>
                 <p className="text-center text-sm text-[#3d5a73] mb-6">
                   Check your email for the 6-digit reset code.
