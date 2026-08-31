@@ -27,12 +27,13 @@ export default function ForgotPasswordPage() {
     setError("");
     try {
       // For password reset, we need to identify the user first
-      await signIn.create({
+      await signIn?.create({
+        strategy: "reset_password_email_code",
         identifier: email,
       });
 
       // Then prepare the email reset
-      await signIn.prepareEmailAddressVerification({ strategy: "email_code" });
+      await signIn?.prepareFirstFactor({ strategy: "reset_password_email_code", emailAddressId: email });
 
       setSuccessfulCreation(true);
     } catch (err: any) {
@@ -48,18 +49,14 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
-      // Step 1: Verify the email code
-      await signIn.attemptEmailAddressVerification({
+      // Step 1: Verify the email code and set new password
+      const result = await signIn?.attemptFirstFactor({
+        strategy: "reset_password_email_code",
         code,
-      });
-
-      // Step 2: Authenticate with the email and new password
-      const result = await signIn.create({
-        identifier: email,
         password,
       });
 
-      if (result.status === "complete") {
+      if (result?.status === "complete") {
         // Step 3: Set the active session
         await clerk.setActive({ session: result.createdSessionId });
         router.push("/field-entry");

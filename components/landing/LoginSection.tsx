@@ -42,8 +42,10 @@ export default function LoginSection() {
 
   const handleGoogleSSO = async () => {
     if (!isLoaded) return;
-    await signIn.authenticateWithRedirect({
+    await signIn?.authenticateWithRedirect({
       strategy: "oauth_google",
+      redirectUrl: "/sso-callback",
+      redirectUrlComplete: "/field-entry",
     });
   };
 
