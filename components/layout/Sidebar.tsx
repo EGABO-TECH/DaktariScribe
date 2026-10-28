@@ -30,9 +30,12 @@ export default function Sidebar() {
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex-shrink-0 bg-white rounded-lg p-1 w-16 h-16 overflow-hidden flex items-center justify-center">
                         {isLoaded && user?.imageUrl ? (
-                            <img
+                            <Image
                                 src={user.imageUrl}
                                 alt={user.fullName || 'User'}
+                                width={64}
+                                height={64}
+                                unoptimized
                                 className="w-full h-full object-cover rounded-md"
                             />
                         ) : (

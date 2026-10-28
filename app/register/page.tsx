@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSignUp } from "@clerk/nextjs";
+import { useSignUp } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -33,7 +33,7 @@ export default function RegisterPage() {
       return;
     }
     
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp) return;
     setIsLoading(true);
     setError("");
     
@@ -47,8 +47,9 @@ export default function RegisterPage() {
       
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setPendingVerification(true);
-    } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || "Failed to register");
+    } catch (err: unknown) {
+      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+      setError(clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to register");
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +57,7 @@ export default function RegisterPage() {
 
   const onPressVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp || !setActive) return;
     setIsLoading(true);
     setError("");
     
@@ -71,8 +72,9 @@ export default function RegisterPage() {
       } else {
         setError("Verification incomplete. Please check your code.");
       }
-    } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || "Failed to verify");
+    } catch (err: unknown) {
+      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+      setError(clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to verify");
     } finally {
       setIsLoading(false);
     }

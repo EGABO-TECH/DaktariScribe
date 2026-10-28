@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const inter = Inter({
@@ -32,8 +33,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ClerkProvider } from '@clerk/nextjs'
-
 export default function RootLayout({
   children,
 }: {
@@ -42,13 +41,6 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={`${inter.variable} h-full antialiased`}>
-        <head>
-          {/* Material Symbols — outlined icon font */}
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-          />
-        </head>
         <body className="h-full bg-[#f0f7f6] text-[#0d2240] overflow-x-hidden">
           {children}
         </body>
