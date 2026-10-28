@@ -3,14 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useSignIn } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-  const { signIn } = useSignIn();
-  const { isLoaded } = useAuth();
-  const clerk = useClerk();
+  const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -22,21 +19,19 @@ export default function ForgotPasswordPage() {
 
   const requestPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn) return;
     setIsLoading(true);
     setError("");
     try {
-      // For password reset, we need to identify the user first
       await signIn.create({
+        strategy: "reset_password_email_code",
         identifier: email,
       });
 
-      // Then prepare the email reset
-      await signIn.prepareEmailAddressVerification({ strategy: "email_code" });
-
       setSuccessfulCreation(true);
-    } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || "Failed to initiate password reset");
+    } catch (err: unknown) {
+      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+      setError(clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to initiate password reset");
     } finally {
       setIsLoading(false);
     }
@@ -44,32 +39,25 @@ export default function ForgotPasswordPage() {
 
   const resetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded || !signIn || !setActive) return;
     setIsLoading(true);
     setError("");
     try {
-      // Step 1: Verify the email code
-      await signIn.attemptEmailAddressVerification({
+      const result = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
         code,
-      });
-
-      // Step 2: Authenticate with the email and new password
-      const result = await signIn.create({
-        identifier: email,
         password,
       });
 
       if (result.status === "complete") {
-        // Step 3: Set the active session
-        await clerk.setActive({ session: result.createdSessionId });
+        await setActive({ session: result.createdSessionId });
         router.push("/field-entry");
       } else {
-        // Handle incomplete sign-in (shouldn't happen in this flow usually)
         setError("Additional verification steps are required.");
       }
-    } catch (err: any) {
-      // Better error handling
-      const errorMessage = err.errors?.[0]?.longMessage || err.message || "Failed to reset password";
+    } catch (err: unknown) {
+      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
+      const errorMessage = clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to reset password";
       setError(errorMessage);
     } finally {
       setIsLoading(false);

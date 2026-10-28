@@ -66,7 +66,7 @@ export default function ReportCard({ recordId, datetime, location, workerName, t
                 <div>
                     <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-on-surface-variant mb-2 block">Clinical Recording</span>
                     <div className="relative">
-                        <span className="absolute top-0 left-0 text-4xl text-outline-variant/30 font-serif leading-none select-none">"</span>
+                        <span className="absolute top-0 left-0 text-4xl text-outline-variant/30 font-serif leading-none select-none">&ldquo;</span>
                         <div className="p-4 pt-5 pb-5 bg-surface-bright border border-outline-variant/20 rounded-xl rounded-tl-none font-body-md text-on-surface leading-relaxed relative z-10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                             {transcript}
                         </div>
