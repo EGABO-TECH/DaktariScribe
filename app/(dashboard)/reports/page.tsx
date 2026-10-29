@@ -9,6 +9,7 @@ const mockReports = [
         time: '09:15 AM',
         location: 'Camp Alpha',
         workerName: 'Dr. Egabo Aaron',
+        status: 'NEEDS_REVIEW' as const,
         transcript: 'Patient presents with mild fever and fatigue. Administered rapid malaria test, results pending. Prescribed paracetamol for symptom management. Advised to return if symptoms worsen over the next 48 hours.'
     },
     {
@@ -17,6 +18,12 @@ const mockReports = [
         time: '11:30 AM',
         location: 'Camp Alpha',
         workerName: 'Dr. Egabo Aaron',
+        status: 'REVIEWED' as const,
+        reviewMetadata: {
+            reviewedBy: 'Dr. Egabo Aaron',
+            reviewedAt: '2026-08-01T12:00:00Z',
+            clinicianAttestation: true,
+        },
         transcript: 'Routine checkup for pregnant mother in second trimester. Blood pressure normal. Prescribed standard prenatal vitamins and scheduled next visit in 4 weeks.'
     },
     {
@@ -25,6 +32,7 @@ const mockReports = [
         time: '10:30 AM',
         location: 'Camp Beta',
         workerName: 'Sarah Jenkins, RN',
+        status: 'NEEDS_REVIEW' as const,
         transcript: 'Mass vaccination drive for pediatric ward. Administered polio drops to 45 infants. No adverse reactions observed during the monitoring period.'
     },
     {
@@ -33,6 +41,7 @@ const mockReports = [
         time: '02:10 PM',
         location: 'Mobile Unit 1',
         workerName: 'Dr. Egabo Aaron',
+        status: 'NEEDS_REVIEW' as const,
         transcript: 'Emergency trauma assessment following vehicular accident. Patient stabilized, minor lacerations sutured. Referred to central hospital for x-ray of left femur.'
     }
 ];
@@ -93,6 +102,8 @@ export default function ReportsGeneratorPage() {
                                                 location={report.location}
                                                 workerName={report.workerName}
                                                 transcript={report.transcript}
+                                                initialStatus={report.status}
+                                                initialReviewMetadata={report.reviewMetadata}
                                             />
                                         ))}
                                     </div>
