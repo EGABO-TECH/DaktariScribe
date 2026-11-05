@@ -1,118 +1,132 @@
-import React from 'react';
-import ReportCard from '@/components/reports/ReportCard';
+import Link from 'next/link';
+import PageShell from '@/components/layout/PageShell';
+import ServiceNotice from '@/components/layout/ServiceNotice';
+import StatusBadge from '@/components/records/StatusBadge';
+import { isDatabaseConfigured } from '@/db';
+import { requireAuth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { listFinalRecords } from '@/lib/records/service';
 
-// Mock data representing records
-const mockReports = [
-    {
-        id: 'DS-2026-01-08-NANO-1A2B',
-        date: '2026-08-01',
-        time: '09:15 AM',
-        location: 'Camp Alpha',
-        workerName: 'Dr. Egabo Aaron',
-        status: 'NEEDS_REVIEW' as const,
-        transcript: 'Patient presents with mild fever and fatigue. Administered rapid malaria test, results pending. Prescribed paracetamol for symptom management. Advised to return if symptoms worsen over the next 48 hours.'
-    },
-    {
-        id: 'DS-2026-01-08-NANO-3C4D',
-        date: '2026-08-01',
-        time: '11:30 AM',
-        location: 'Camp Alpha',
-        workerName: 'Dr. Egabo Aaron',
-        status: 'REVIEWED' as const,
-        reviewMetadata: {
-            reviewedBy: 'Dr. Egabo Aaron',
-            reviewedAt: '2026-08-01T12:00:00Z',
-            clinicianAttestation: true,
-        },
-        transcript: 'Routine checkup for pregnant mother in second trimester. Blood pressure normal. Prescribed standard prenatal vitamins and scheduled next visit in 4 weeks.'
-    },
-    {
-        id: 'DS-2026-02-08-NANO-5E6F',
-        date: '2026-08-02',
-        time: '10:30 AM',
-        location: 'Camp Beta',
-        workerName: 'Sarah Jenkins, RN',
-        status: 'NEEDS_REVIEW' as const,
-        transcript: 'Mass vaccination drive for pediatric ward. Administered polio drops to 45 infants. No adverse reactions observed during the monitoring period.'
-    },
-    {
-        id: 'DS-2026-04-08-NANO-7G8H',
-        date: '2026-08-04',
-        time: '02:10 PM',
-        location: 'Mobile Unit 1',
-        workerName: 'Dr. Egabo Aaron',
-        status: 'NEEDS_REVIEW' as const,
-        transcript: 'Emergency trauma assessment following vehicular accident. Patient stabilized, minor lacerations sutured. Referred to central hospital for x-ray of left femur.'
-    }
-];
+export const metadata = { title: 'Reports — DaktariScribe' };
 
-export default function ReportsGeneratorPage() {
-    // Group reports by month/year and then by day
-    const groupedReports = mockReports.reduce((acc, report) => {
-        const dateObj = new Date(report.date);
-        const monthYear = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const day = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+type Row = Awaited<ReturnType<typeof listFinalRecords>>[number];
 
-        if (!acc[monthYear]) {
-            acc[monthYear] = {};
-        }
-        if (!acc[monthYear][day]) {
-            acc[monthYear][day] = [];
-        }
-        acc[monthYear][day].push(report);
-        return acc;
-    }, {} as Record<string, Record<string, typeof mockReports>>);
+const monthFmt = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const dayFmt = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+const signedFmt = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Kampala' });
 
+function group(rows: Row[]) {
+  const months = new Map<string, Map<string, Row[]>>();
+  for (const r of rows) {
+    const d = new Date(`${r.encounterDate}T00:00:00Z`);
+    const m = monthFmt.format(d);
+    const day = dayFmt.format(d);
+    if (!months.has(m)) months.set(m, new Map());
+    const days = months.get(m)!;
+    if (!days.has(day)) days.set(day, []);
+    days.get(day)!.push(r);
+  }
+  return months;
+}
+
+export default async function ReportsPage() {
+  const ctx = await requireAuth();
+
+  if (!isDatabaseConfigured()) {
     return (
-        <div className="flex-1 overflow-y-auto p-margin-desktop bg-surface pb-24 lg:pb-margin-desktop">
-            {/* Header Section */}
-            <div className="flex justify-between items-end mb-8">
-                <div>
-                    <h2 className="font-display-lg text-[32px] text-primary mb-2">Reports Generator</h2>
-                    <p className="font-body-lg text-body-lg text-on-surface-variant">View and export clinical records as highly detailed, print-ready field reports.</p>
-                </div>
-            </div>
-
-            {/* Reports Feed */}
-            <div className="flex flex-col gap-12">
-                {Object.entries(groupedReports).map(([monthYear, days]) => (
-                    <div key={monthYear} className="flex flex-col gap-8">
-                        {/* Month/Year Header */}
-                        <div className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md py-4 border-b-2 border-secondary/20">
-                            <h2 className="text-2xl font-display-lg font-bold text-primary">{monthYear}</h2>
-                        </div>
-
-                        <div className="flex flex-col gap-10">
-                            {Object.entries(days).map(([day, reports]) => (
-                                <div key={day} className="flex flex-col gap-6">
-                                    {/* Day Header */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-px bg-outline-variant/30 flex-1"></div>
-                                        <h3 className="text-sm font-bold tracking-widest uppercase text-secondary">{day}</h3>
-                                        <div className="h-px bg-outline-variant/30 flex-1"></div>
-                                    </div>
-
-                                    {/* Reports Grid */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {reports.map((report) => (
-                                            <ReportCard 
-                                                key={report.id}
-                                                recordId={report.id}
-                                                datetime={`${new Date(report.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}, ${report.time}`}
-                                                location={report.location}
-                                                workerName={report.workerName}
-                                                transcript={report.transcript}
-                                                initialStatus={report.status}
-                                                initialReviewMetadata={report.reviewMetadata}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+      <PageShell title="Reports">
+        <ServiceNotice title="Records service unavailable">Reports can&apos;t be shown right now.</ServiceNotice>
+      </PageShell>
     );
+  }
+
+  let rows: Row[];
+  try {
+    rows = await listFinalRecords(ctx);
+  } catch (err) {
+    logger.error('reports.load_failed', { err });
+    return (
+      <PageShell title="Reports">
+        <ServiceNotice title="Reports could not be loaded">Check your connection and reload the page.</ServiceNotice>
+      </PageShell>
+    );
+  }
+
+  const months = group(rows);
+
+  return (
+    <PageShell title="Reports" description="Signed-off records, ready to download as PDF field reports.">
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 text-center">
+          <span className="material-symbols-outlined text-[32px] text-on-surface-variant" aria-hidden="true">
+            description
+          </span>
+          <p className="mt-2 font-semibold text-on-surface">No signed-off records yet.</p>
+          <p className="mt-1 text-body-md text-on-surface-variant">Records appear here once they have been reviewed and signed off.</p>
+          <Link href="/saved-records?status=in_review" className="mt-3 inline-flex min-h-12 items-center rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10">
+            Records waiting for review
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-10">
+          {[...months.entries()].map(([month, days]) => (
+            <section key={month} aria-label={month} className="flex flex-col gap-6">
+              <h2 className="sticky top-0 z-10 border-b-2 border-secondary/30 bg-surface py-3 font-display-lg text-headline-md text-primary">{month}</h2>
+              {[...days.entries()].map(([day, items]) => (
+                <div key={day} className="flex flex-col gap-3">
+                  <h3 className="flex items-center gap-3 text-[13px] font-bold uppercase tracking-widest text-secondary">
+                    <span aria-hidden="true" className="h-px flex-1 bg-outline-variant" />
+                    {day}
+                    <span aria-hidden="true" className="h-px flex-1 bg-outline-variant" />
+                  </h3>
+                  <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {items.map((r) => (
+                      <li key={r.id} className="flex flex-col rounded-xl border border-outline-variant bg-surface-container-lowest">
+                        <div className="flex items-start justify-between gap-2 border-b border-outline-variant p-4">
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant">Field report</p>
+                            <Link href={`/records/${r.id}`} className="font-label-status text-[13px] font-semibold text-primary break-all hover:underline">
+                              {r.id}
+                            </Link>
+                          </div>
+                          <StatusBadge status="final" />
+                        </div>
+                        <dl className="grid grid-cols-2 gap-3 p-4 text-body-md">
+                          <div>
+                            <dt className="text-[12px] text-on-surface-variant">Site</dt>
+                            <dd className="font-semibold text-on-surface">{r.site}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-[12px] text-on-surface-variant">Template</dt>
+                            <dd className="text-on-surface">{r.templateName}</dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="text-[12px] text-on-surface-variant">Signed off</dt>
+                            <dd className="text-on-surface">
+                              {r.signerName} · {signedFmt.format(r.signedAt)}
+                            </dd>
+                          </div>
+                        </dl>
+                        <div className="mt-auto border-t border-outline-variant p-3">
+                          <a
+                            href={`/api/exports/${encodeURIComponent(r.id)}`}
+                            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 font-semibold text-on-primary hover:bg-primary/90"
+                          >
+                            <span className="material-symbols-outlined" aria-hidden="true">
+                              picture_as_pdf
+                            </span>
+                            Download PDF
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
+      )}
+    </PageShell>
+  );
 }
