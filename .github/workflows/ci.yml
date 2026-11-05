@@ -1,0 +1,57 @@
+# CI (spec §5 Phase 6.9): lint, type-check, tests, copy check, build, secret scan, dependency audit,
+# and an OWASP ZAP baseline against the preview deployment when one is available.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values so the build can run without real secrets. Never put real keys here.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CI_CLERK_PUBLISHABLE_KEY || 'pk_test_Y2kuZXhhbXBsZS5jb20k' }}
+      CLERK_SECRET_KEY: ${{ secrets.CI_CLERK_SECRET_KEY || 'sk_test_ci_placeholder' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run check:copy
+      - run: npm run eval:refine -- --offline
+      - run: npm run build
+      - name: npm audit (high and critical)
+        run: npm audit --audit-level=high --omit=dev
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  zap-baseline:
+    # Runs against the preview URL when provided (set the PREVIEW_URL repository variable,
+    # or wire this to your deployment's preview URL output).
+    if: ${{ vars.PREVIEW_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ vars.PREVIEW_URL }}
+          fail_action: true
+          allow_issue_writing: false
