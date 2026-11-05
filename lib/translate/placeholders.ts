@@ -33,14 +33,20 @@ export function protect(text: string): { text: string; map: ProtectMap } {
     map.set(token, value);
     return token;
   };
-  for (const p of PATTERNS) {
-    out = out.replace(p.re, (m) => (p.tag === 'P' ? swap('P', m) : swap(p.tag, m)));
-  }
-  // Drug names (longest first, case-insensitive, whole words)
+  // Replace only in the text between tokens created so far (never inside "⟦…⟧").
+  const outside = (re: RegExp, tag: string) => {
+    out = out
+      .split(/(⟦[^⟧]*⟧)/)
+      .map((part, i) => (i % 2 === 1 ? part : part.replace(re, (m) => swap(tag, m))))
+      .join('');
+  };
+  // Pseudonym placeholders (⟦PERSON_1⟧) are wrapped first so the integrity check covers them too.
+  out = out.replace(PATTERNS[0].re, (m) => swap('P', m));
+  // Drug names first (longest first, case-insensitive, whole words) so "1g" stays a dose token.
   for (const drug of [...DRUG_NAMES].sort((a, b) => b.length - a.length)) {
-    const re = new RegExp(`(?<![\\p{L}⟦])${drug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}])`, 'giu');
-    out = out.replace(re, (m) => swap('DRUG', m));
+    outside(new RegExp(`(?<![\\p{L}])${drug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}])`, 'giu'), 'DRUG');
   }
+  for (const p of PATTERNS.slice(1)) outside(p.re, p.tag);
   return { text: out, map };
 }
 
