@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "check:copy": "tsx scripts/check-copy.ts"
+    "check:copy": "tsx scripts/check-copy.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx --env-file=.env.local db/seed.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.3",

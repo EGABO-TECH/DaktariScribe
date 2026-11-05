@@ -26,7 +26,7 @@ export const BANNED_WORDS: RegExp[] = [
   /\bmodels?\b/i,
   /\bllms?\b/i,
   /\bgpt\b/i,
-  /\bgenerat(?:e|ed|es|ing)\b/i,
+  /\b(?:re)?generat(?:e|ed|es|ing)\b/i,
   /\bsynthesi[sz](?:e|ed|es|ing|is)\b/i,
   /\bhallucinat(?:e|ed|es|ion|ions)\b/i,
   /\bprompts?\b/i,
