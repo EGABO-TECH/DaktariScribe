@@ -1,0 +1,3 @@
+{ "id": "09-pneumonia-child", "templateId": "tpl_general_consultation", "language": "eng",
+  "source": "Child 9 months. Cough and fast breathing, RR 56/min. SpO2 94%. No chest indrawing. Given amoxicillin 250 mg BD x 5 days. Return if worse.",
+  "facts": ["9 months", "56", "94%", "no chest indrawing", "amoxicillin 250 mg", "5 days"] }

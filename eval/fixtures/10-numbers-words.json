@@ -1,0 +1,3 @@
+{ "id": "10-numbers-words", "templateId": "tpl_general_consultation", "language": "eng",
+  "source": "Temperature thirty-eight point two. Pulse one hundred and four. Patient denies rash. Given paracetamol 500 mg.",
+  "facts": ["38.2", "104", "no rash", "paracetamol 500 mg"] }

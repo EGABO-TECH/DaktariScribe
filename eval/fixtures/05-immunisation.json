@@ -1,0 +1,3 @@
+{ "id": "05-immunisation", "templateId": "tpl_immunisation_session", "language": "eng",
+  "source": "Outreach session at Kiryandongo. 42 children vaccinated. BCG 6, OPV 18, PCV 15, measles-rubella 9. Cold chain ok. 1 AEFI: mild fever after PCV, resolved.",
+  "facts": ["42", "BCG 6", "OPV 18", "PCV 15", "9", "1 AEFI", "mild fever"] }

@@ -11,7 +11,8 @@
     "check:copy": "tsx scripts/check-copy.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx --env-file=.env.local db/seed.ts"
+    "db:seed": "tsx --env-file=.env.local db/seed.ts",
+    "eval:refine": "tsx scripts/eval-refine.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
