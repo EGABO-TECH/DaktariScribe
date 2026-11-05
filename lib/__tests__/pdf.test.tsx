@@ -25,8 +25,8 @@ const record: RecordDetail = {
   status: 'final',
   createdAt: new Date('2026-08-01T09:00:00Z'),
   template: { id: tpl.id, name: tpl.name, version: tpl.version, definition: tpl.definition },
-  sources: [{ id: 'src1', kind: 'text', engine: 'typed', rawText: raw, createdAt: new Date() }],
-  currentVersion: { id: 'v1', versionNo: 1, createdBy: 'user_1', createdAt: new Date(), content },
+  sources: [{ id: 'src1', kind: 'text', engine: 'typed', rawText: raw, createdAt: new Date(), status: 'ready', error: null, mimeType: 'text/plain', fileCount: 0, durationSec: null, segments: null, meta: null }],
+  currentVersion: { id: 'v1', versionNo: 1, createdBy: 'user_1', createdAt: new Date(), content, verification: null },
   versions: [{ id: 'v1', versionNo: 1, createdBy: 'user_1', createdAt: new Date() }],
   signoff: { signerId: 'user_1', signerName: 'Test Worker', signedAt: new Date('2026-08-01T10:00:00Z'), statement: 'I confirm.' },
 };

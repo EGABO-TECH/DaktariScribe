@@ -14,7 +14,7 @@ import { recordUsage } from '@/lib/billing/usage';
 import { encryptJson, encryptString } from '@/lib/crypto';
 import { logger } from '@/lib/logger';
 import { assemblyAi } from '@/lib/stt/assemblyai';
-import { guardSegments, transcriptText } from '@/lib/stt/guard';
+import { buildTranscript, guardSegments } from '@/lib/stt/guard';
 import { AudioTrimmedError, type SttEngine, type TranscriptSegment } from '@/lib/stt/types';
 import { sunbirdStt } from '@/lib/sunbird/stt';
 import { readFile, receivedParts } from '@/lib/storage';
@@ -72,7 +72,7 @@ export async function runTranscription(sourceId: string, opts: { rethrow?: boole
       for (const engine of engines) {
         try {
           const r = await engine.transcribe(audio, src.mimeType ?? 'audio/webm', language);
-          for (const s of r.segments) all.push({ ...s, start: s.start + offset, end: s.end + offset, file });
+          for (const s of r.segments) all.push({ ...s, start: s.start + offset, end: s.end + offset, file, fileOffset: offset });
           offset += r.durationSec;
           seconds[engine.name] += r.durationSec;
           enginesUsed.push(engine.name);
@@ -92,8 +92,9 @@ export async function runTranscription(sourceId: string, opts: { rethrow?: boole
     return;
   }
 
-  const { segments, report } = guardSegments(all);
-  const text = transcriptText(segments);
+  const guarded = guardSegments(all);
+  const report = guarded.report;
+  const { text, segments } = buildTranscript(guarded.segments);
   await db
     .update(schema.source)
     .set({

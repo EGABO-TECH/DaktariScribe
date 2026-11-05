@@ -4,7 +4,12 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import StatusBadge from '@/components/records/StatusBadge';
 import { useOnline } from '@/components/layout/OfflineBanner';
-import { draftStore, type Draft, type DraftHeader } from '@/lib/offline/db';
+import PinGate from '@/components/offline/PinGate';
+import { useDevice } from '@/components/offline/DeviceProvider';
+import Recorder from './Recorder';
+import UploadPicker from './UploadPicker';
+import { db, draftStore, type Draft, type DraftHeader } from '@/lib/offline/db';
+import { discard as discardOutbox, enqueue, onOutboxChange, pendingItems, retry, type OutboxView } from '@/lib/offline/outbox';
 import { INTERVIEW_LANGUAGES } from '@/lib/records/languages';
 
 export type TemplateOption = { id: string; name: string };
@@ -32,6 +37,8 @@ function newDraft(templates: TemplateOption[], prev?: DraftHeader): Draft {
       interviewLanguage: prev?.interviewLanguage ?? 'eng',
     },
     text: '',
+    segments: [],
+    attachments: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -43,14 +50,38 @@ const inputCls =
   'w-full min-h-12 rounded-lg border border-outline bg-surface-container-lowest px-3 text-[16px] text-on-surface placeholder:text-on-surface-variant/80 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30';
 const labelCls = 'block text-[13px] font-semibold text-on-surface mb-1';
 
+const OUTBOX_LABEL: Record<OutboxView['status'], string> = {
+  queued: 'Waiting to upload',
+  creating: 'Uploading',
+  uploading: 'Uploading',
+  completing: 'Uploading',
+  done: 'Uploaded',
+  failed: 'Needs attention',
+};
+
+function hasContent(d: Draft) {
+  return Boolean(d.text.trim() || d.segments.length || d.attachments.length);
+}
+
 export default function FieldEntry({ templates }: { templates: TemplateOption[] }) {
+  return (
+    <PinGate>
+      <Capture templates={templates} />
+    </PinGate>
+  );
+}
+
+function Capture({ templates }: { templates: TemplateOption[] }) {
   const router = useRouter();
   const online = useOnline();
+  const { pending } = useDevice();
   const [tab, setTab] = useState<Tab>('type');
   const [draft, setDraft] = useState<Draft>(() => newDraft(templates));
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'idle' });
   const [otherDrafts, setOtherDrafts] = useState<Draft[]>([]);
+  const [queue, setQueue] = useState<OutboxView[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const dirty = useRef(false);
   const draftRef = useRef(draft);
@@ -58,16 +89,15 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     draftRef.current = draft;
   }, [draft]);
 
-  const refreshDrafts = useCallback(async () => {
+  const refreshLists = useCallback(async () => {
     try {
-      const all = await draftStore.list();
-      setOtherDrafts(all);
+      setOtherDrafts(await draftStore.list());
+      setQueue(await pendingItems());
     } catch {
-      /* IndexedDB unavailable (private mode); capture still works in memory */
+      /* locked or storage unavailable */
     }
   }, []);
 
-  // Resume the most recent draft on this device, if any.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -76,31 +106,33 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
         if (cancelled) return;
         setOtherDrafts(all);
         if (all[0] && !dirty.current) setDraft(all[0]);
+        setQueue(await pendingItems());
       } catch {
         /* ignore */
       }
     })();
+    const off = onOutboxChange(() => void refreshLists());
     return () => {
       cancelled = true;
+      off();
     };
-  }, []);
+  }, [refreshLists]);
 
   const persist = useCallback(async () => {
     if (!dirty.current) return;
     const d = draftRef.current;
-    if (!d.text.trim() && !d.header.site && !d.header.respondentRef) return; // nothing worth keeping yet
+    if (!hasContent(d) && !d.header.site && !d.header.respondentRef) return;
     try {
       const updated = { ...d, updatedAt: Date.now() };
       await draftStore.save(updated);
       dirty.current = false;
       setSaveState({ kind: 'saved', at: updated.updatedAt });
-      refreshDrafts();
+      void refreshLists();
     } catch {
       setSaveState({ kind: 'error' });
     }
-  }, [refreshDrafts]);
+  }, [refreshLists]);
 
-  // Autosave every 3 s while there are unsaved changes, and when the tab is hidden.
   useEffect(() => {
     const t = setInterval(persist, AUTOSAVE_MS);
     const onHide = () => document.visibilityState === 'hidden' && persist();
@@ -111,10 +143,21 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     };
   }, [persist]);
 
-  const update = (patch: Partial<DraftHeader> | { text: string }) => {
+  const update = (patch: Partial<DraftHeader> | { text: string } | Pick<Draft, 'segments'> | Pick<Draft, 'attachments'>) => {
     dirty.current = true;
     setErrors([]);
-    setDraft((d) => ('text' in patch ? { ...d, text: patch.text } : { ...d, header: { ...d.header, ...patch } }));
+    setNotice('');
+    setDraft((d) => {
+      if ('text' in patch || 'segments' in patch || 'attachments' in patch) return { ...d, ...patch };
+      return { ...d, header: { ...d.header, ...patch } };
+    });
+  };
+
+  // Segments/attachments are written to storage as they are captured: save the draft right away.
+  const updateMedia = (patch: Pick<Draft, 'segments'> | Pick<Draft, 'attachments'>) => {
+    update(patch);
+    dirty.current = true;
+    setTimeout(() => void persist(), 0);
   };
 
   const validate = (): string[] => {
@@ -124,13 +167,8 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     if (!h.site.trim()) e.push('Enter the site.');
     if (!h.encounterDate) e.push('Enter the encounter date.');
     if (!h.consentObtained) e.push('Confirm that consent was obtained.');
-    if (!draft.text.trim()) e.push('The note is empty.');
+    if (!hasContent(draft)) e.push('Type a note, record the interview or attach a file first.');
     return e;
-  };
-
-  const saveDraft = async () => {
-    dirty.current = true;
-    await persist();
   };
 
   const startNew = async () => {
@@ -138,6 +176,7 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     setDraft(newDraft(templates, draft.header));
     setSaveState({ kind: 'idle' });
     setErrors([]);
+    setNotice('');
   };
 
   const resume = async (d: Draft) => {
@@ -147,50 +186,46 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     setErrors([]);
   };
 
-  const discard = async (d: Draft) => {
-    if (!window.confirm('Delete this draft from this device? This cannot be undone.')) return;
+  const discardDraft = async (d: Draft) => {
+    if (!window.confirm('Delete this draft and its recordings from this device? This cannot be undone.')) return;
     await draftStore.remove(d.id);
     if (d.id === draft.id) setDraft(newDraft(templates, draft.header));
-    refreshDrafts();
+    void refreshLists();
   };
 
+  /** Process: queue the draft in the outbox. It syncs now if online, or as soon as the device reconnects. */
   const processNote = async () => {
     const e = validate();
     setErrors(e);
     if (e.length) return;
-    dirty.current = true;
-    await persist();
-    if (!online) {
-      setErrors(['You are offline. The draft is saved on this device. Process it when you are back online.']);
-      return;
-    }
     setSubmitting(true);
+    const id = draft.id;
     try {
-      const res = await fetch('/api/encounters', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idempotencyKey: draft.id,
-          templateId: draft.header.templateId,
-          site: draft.header.site,
-          encounterDate: draft.header.encounterDate,
-          respondentRef: draft.header.respondentRef,
-          consentObtained: draft.header.consentObtained,
-          interviewLanguage: draft.header.interviewLanguage,
-          text: draft.text,
-          deviceCreatedAt: new Date(draft.createdAt).toISOString(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const issues: string[] = (data.issues ?? []).map((i: { message: string }) => i.message);
-        setErrors(issues.length ? issues : [data.error ?? 'Could not process the note. Your draft is still saved on this device.']);
+      await enqueue({ ...draft, updatedAt: Date.now() });
+      dirty.current = false;
+      setDraft(newDraft(templates, draft.header));
+      setSaveState({ kind: 'idle' });
+      void refreshLists();
+      if (!navigator.onLine) {
+        setNotice('Saved on this device and queued. It will upload automatically when you are back online.');
         return;
       }
-      await draftStore.remove(draft.id);
-      router.push(`/records/${encodeURIComponent(data.id)}`);
+      setNotice('Uploading… you can start the next encounter.');
+      // If it finishes quickly, open the record.
+      const started = Date.now();
+      const check = async () => {
+        const meta = (await db().meta.get('recentSynced'))?.value as { id: string; encounterId: string }[] | undefined;
+        const hit = meta?.find((m) => m.id === id);
+        if (hit) {
+          router.push(`/records/${encodeURIComponent(hit.encounterId)}`);
+          return;
+        }
+        if (Date.now() - started < 20_000) setTimeout(check, 1000);
+        else setNotice('Still uploading in the background. You will find the record in Saved Records when it finishes.');
+      };
+      setTimeout(check, 800);
     } catch {
-      setErrors(['Connection lost. Your draft is still saved on this device. Try again when you are back online.']);
+      setErrors(['Could not queue this encounter on the device. Try again.']);
     } finally {
       setSubmitting(false);
     }
@@ -203,15 +238,25 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
     return (
       <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 text-on-surface">
         <h2 className="font-headline-sm text-headline-sm text-primary mb-1">No templates available</h2>
-        <p className="text-body-md text-on-surface-variant">
-          Templates have not been set up for this workspace yet. Ask an administrator to run the template seed (npm run db:seed).
-        </p>
+        <p className="text-body-md text-on-surface-variant">Templates have not been set up for this workspace yet. Ask an administrator to run the template seed.</p>
       </div>
     );
   }
 
+  const tabs = [
+    { id: 'type', label: 'Type', icon: 'keyboard', count: words ? 1 : 0 },
+    { id: 'record', label: 'Record', icon: 'mic', count: draft.segments.length },
+    { id: 'upload', label: 'Upload', icon: 'upload_file', count: draft.attachments.length },
+  ] as const;
+
   return (
     <div className="flex flex-col gap-gutter pb-28 lg:pb-0">
+      {notice && (
+        <p role="status" className="rounded-lg border border-secondary bg-success-container p-3 text-[14px] font-semibold text-on-success-container">
+          {notice}
+        </p>
+      )}
+
       {/* Encounter details */}
       <section aria-labelledby="enc-details" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -242,16 +287,7 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
             <label htmlFor="site" className={labelCls}>
               Site
             </label>
-            <input
-              id="site"
-              className={inputCls}
-              value={draft.header.site}
-              onChange={(e) => update({ site: e.target.value })}
-              onBlur={persist}
-              placeholder="e.g. Kiryandongo HC III"
-              autoComplete="off"
-              maxLength={120}
-            />
+            <input id="site" className={inputCls} value={draft.header.site} onChange={(e) => update({ site: e.target.value })} onBlur={persist} placeholder="e.g. Kiryandongo HC III" autoComplete="off" maxLength={120} />
           </div>
           <div>
             <label htmlFor="date" className={labelCls}>
@@ -263,16 +299,7 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
             <label htmlFor="ref" className={labelCls}>
               Respondent reference <span className="font-normal text-on-surface-variant">(optional)</span>
             </label>
-            <input
-              id="ref"
-              className={inputCls}
-              value={draft.header.respondentRef}
-              onChange={(e) => update({ respondentRef: e.target.value })}
-              onBlur={persist}
-              placeholder="Local ID, not a name"
-              autoComplete="off"
-              maxLength={80}
-            />
+            <input id="ref" className={inputCls} value={draft.header.respondentRef} onChange={(e) => update({ respondentRef: e.target.value })} onBlur={persist} placeholder="Local ID, not a name" autoComplete="off" maxLength={80} />
           </div>
           <div>
             <label htmlFor="lang" className={labelCls}>
@@ -288,12 +315,7 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
           </div>
           <div className="flex items-end">
             <label className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-lg border border-outline px-3 has-[:checked]:border-secondary has-[:checked]:bg-success-container">
-              <input
-                type="checkbox"
-                className="h-6 w-6 shrink-0 accent-[var(--color-secondary)]"
-                checked={draft.header.consentObtained}
-                onChange={(e) => update({ consentObtained: e.target.checked })}
-              />
+              <input type="checkbox" className="h-6 w-6 shrink-0 accent-[var(--color-secondary)]" checked={draft.header.consentObtained} onChange={(e) => update({ consentObtained: e.target.checked })} />
               <span className="text-[14px] font-semibold text-on-surface">Consent obtained from the respondent</span>
             </label>
           </div>
@@ -302,14 +324,8 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
 
       {/* Capture */}
       <section aria-label="Capture" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <div role="tablist" aria-label="Capture method" className="mb-4 inline-flex rounded-lg border border-outline-variant bg-surface-container-low p-1">
-          {(
-            [
-              { id: 'type', label: 'Type', icon: 'keyboard', ready: true },
-              { id: 'record', label: 'Record', icon: 'mic', ready: false },
-              { id: 'upload', label: 'Upload', icon: 'upload_file', ready: false },
-            ] as const
-          ).map((t) => (
+        <div role="tablist" aria-label="Capture method" className="mb-4 grid grid-cols-3 rounded-lg border border-outline-variant bg-surface-container-low p-1 sm:inline-grid">
+          {tabs.map((t) => (
             <button
               key={t.id}
               role="tab"
@@ -318,7 +334,7 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
               aria-controls={`panel-${t.id}`}
               id={`tab-${t.id}`}
               onClick={() => setTab(t.id)}
-              className={`inline-flex min-h-12 items-center gap-1.5 rounded-md px-4 text-[14px] font-semibold transition-colors ${
+              className={`inline-flex min-h-12 items-center justify-center gap-1.5 rounded-md px-4 text-[14px] font-semibold transition-colors ${
                 tab === t.id ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'
               }`}
             >
@@ -326,12 +342,12 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
                 {t.icon}
               </span>
               {t.label}
-              {!t.ready && <span className="sr-only"> (coming soon)</span>}
+              {t.count > 0 && <span className="rounded-full bg-surface-container-highest px-1.5 text-[12px] text-on-surface">{t.count}</span>}
             </button>
           ))}
         </div>
 
-        {tab === 'type' ? (
+        {tab === 'type' && (
           <div role="tabpanel" id="panel-type" aria-labelledby="tab-type">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label htmlFor="note" className="text-[13px] font-semibold text-on-surface">
@@ -358,19 +374,22 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
               placeholder={'Type the encounter as you would on paper.\nLeave a blank line between paragraphs.'}
               className="w-full min-h-[320px] resize-y rounded-lg border border-outline bg-surface-container-lowest p-4 text-[16px] leading-7 text-on-surface placeholder:text-on-surface-variant/80 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
             />
-            <p className="mt-2 text-[13px] text-on-surface-variant">
-              Your original note is stored exactly as typed. You review the record and sign it off before it becomes final.
-            </p>
-          </div>
-        ) : (
-          <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="rounded-lg border border-dashed border-outline p-8 text-center">
-            <span className="material-symbols-outlined text-[32px] text-on-surface-variant" aria-hidden="true">
-              {tab === 'record' ? 'mic' : 'upload_file'}
-            </span>
-            <p className="mt-2 font-semibold text-on-surface">{tab === 'record' ? 'Voice recording' : 'Upload notes'} is coming soon</p>
-            <p className="mt-1 text-[14px] text-on-surface-variant">Use the Type tab for now.</p>
           </div>
         )}
+        {tab === 'record' && (
+          <div role="tabpanel" id="panel-record" aria-labelledby="tab-record">
+            <Recorder draftId={draft.id} segments={draft.segments} onSegmentsChange={(segments) => updateMedia({ segments })} />
+          </div>
+        )}
+        {tab === 'upload' && (
+          <div role="tabpanel" id="panel-upload" aria-labelledby="tab-upload">
+            <UploadPicker draftId={draft.id} attachments={draft.attachments} onChange={(attachments) => updateMedia({ attachments })} />
+          </div>
+        )}
+
+        <p className="mt-3 text-[13px] text-on-surface-variant">
+          Your notes, recordings and files are kept exactly as captured. You review the record and sign it off before it becomes final.
+        </p>
 
         {errors.length > 0 && (
           <div role="alert" className="mt-4 rounded-lg border border-error bg-error-container p-3 text-[14px] text-on-error-container">
@@ -383,11 +402,13 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
           </div>
         )}
 
-        {/* Actions: sticky at the bottom on phones, above the bottom nav */}
         <div className="fixed inset-x-0 bottom-16 z-40 flex gap-3 border-t border-outline-variant bg-surface-container-lowest p-3 lg:static lg:mt-4 lg:justify-end lg:border-0 lg:bg-transparent lg:p-0">
           <button
             type="button"
-            onClick={saveDraft}
+            onClick={() => {
+              dirty.current = true;
+              void persist();
+            }}
             className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-secondary px-5 font-semibold text-secondary hover:bg-secondary/10 lg:flex-none"
           >
             <span className="material-symbols-outlined" aria-hidden="true">
@@ -398,16 +419,54 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
           <button
             type="button"
             onClick={processNote}
-            disabled={submitting || tab !== 'type'}
+            disabled={submitting}
             className="inline-flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-on-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 lg:flex-none"
           >
             <span className="material-symbols-outlined" aria-hidden="true">
-              {submitting ? 'hourglass_top' : 'arrow_forward'}
+              {online ? 'arrow_forward' : 'schedule_send'}
             </span>
-            {submitting ? 'Processing…' : 'Process'}
+            {submitting ? 'Saving…' : online ? 'Process' : 'Process when online'}
           </button>
         </div>
       </section>
+
+      {queue.length > 0 && (
+        <section aria-labelledby="queue-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
+          <h2 id="queue-h" className="mb-3 font-headline-sm text-headline-sm text-primary">
+            Waiting to upload <span className="text-body-md font-normal text-on-surface-variant">· {pending}</span>
+          </h2>
+          <ul className="divide-y divide-outline-variant">
+            {queue.map((q) => (
+              <li key={q.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-on-surface">{q.site || 'Encounter'}</p>
+                  <p className="text-[13px] text-on-surface-variant">
+                    {q.date} · {OUTBOX_LABEL[q.status]}
+                    {q.error ? ` · ${q.error}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={q.status === 'failed' ? 'saved_on_device' : q.status === 'queued' ? 'saved_on_device' : 'uploading'} />
+                  {q.status === 'failed' && (
+                    <>
+                      <button type="button" onClick={() => void retry(q.id)} className="min-h-12 rounded-lg px-3 font-semibold text-secondary hover:bg-secondary/10">
+                        Retry
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => window.confirm('Delete this encounter from the device? It has not been uploaded.') && void discardOutbox(q.id)}
+                        className="min-h-12 rounded-lg px-3 font-semibold text-error hover:bg-error/10"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {drafts.length > 0 && (
         <section aria-labelledby="device-drafts" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
@@ -420,19 +479,16 @@ export default function FieldEntry({ templates }: { templates: TemplateOption[] 
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-on-surface">{d.header.site || 'No site yet'}</p>
                   <p className="text-[13px] text-on-surface-variant">
-                    {d.header.encounterDate} · edited {timeFmt.format(d.updatedAt)} · {d.text.trim() ? d.text.trim().split(/\s+/).length : 0} words
+                    {d.header.encounterDate} · edited {timeFmt.format(d.updatedAt)}
+                    {d.segments.length ? ` · ${d.segments.length} recording part(s)` : ''}
+                    {d.attachments.length ? ` · ${d.attachments.length} file(s)` : ''}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => resume(d)} className="min-h-12 rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10">
                     Resume
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => discard(d)}
-                    className="min-h-12 rounded-lg px-4 font-semibold text-error hover:bg-error/10"
-                    aria-label={`Delete draft for ${d.header.site || 'untitled'}`}
-                  >
+                  <button type="button" onClick={() => discardDraft(d)} className="min-h-12 rounded-lg px-4 font-semibold text-error hover:bg-error/10" aria-label={`Delete draft for ${d.header.site || 'untitled'}`}>
                     Delete
                   </button>
                 </div>

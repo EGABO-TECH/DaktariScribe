@@ -14,7 +14,7 @@ export function errorResponse(err: unknown, event: string, meta: Record<string, 
   const status = (err as { status?: number })?.status;
   if (status === 401) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
   if (status === 404) return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
-  if (status === 403 || status === 409 || status === 429) return NextResponse.json({ error: (err as Error).message }, { status });
+  if (status === 403 || status === 409 || status === 429 || status === 503) return NextResponse.json({ error: (err as Error).message }, { status });
   if (status === 402) {
     const code = (err as { code?: string }).code;
     return NextResponse.json({ error: (err as Error).message, code, buyPass: true }, { status: 402 });

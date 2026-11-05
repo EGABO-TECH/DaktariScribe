@@ -2,6 +2,8 @@
 
 import React, { useSyncExternalStore } from 'react';
 import { UserButton, useUser } from '@clerk/nextjs';
+import SyncStatus from '@/components/offline/SyncStatus';
+import PassChip from '@/components/billing/PassChip';
 
 type Theme = 'light' | 'dark';
 
@@ -63,6 +65,8 @@ export default function Header() {
         )}
       </p>
       <div className="flex items-center gap-2">
+        <SyncStatus />
+        <PassChip />
         <ThemeToggle />
         <UserButton />
       </div>

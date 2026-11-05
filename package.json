@@ -26,6 +26,7 @@
     "dexie": "^4.4.7",
     "docx": "^9.15.2",
     "drizzle-orm": "^0.45.4",
+    "heic2any": "^0.0.4",
     "inngest": "^4.26.2",
     "mammoth": "^1.13.0",
     "nanoid": "^6.0.2",
