@@ -12,6 +12,7 @@ export default function SignOffPanel({
   status,
   isAuthor,
   statement,
+  blockingFlags = 0,
 }: {
   recordId: string;
   versionId: string;
@@ -19,12 +20,13 @@ export default function SignOffPanel({
   status: EncounterStatus;
   isAuthor: boolean;
   statement: string;
+  blockingFlags?: number;
 }) {
   const router = useRouter();
   const [attested, setAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const blocker = signOffBlocker({ status, isAuthor, hasVersion: true, attested });
+  const blocker = signOffBlocker({ status, isAuthor, hasVersion: true, attested, blockingFlags });
 
   const submit = async () => {
     if (blocker) return;

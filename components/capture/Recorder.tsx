@@ -56,7 +56,7 @@ export default function Recorder({
   const segStart = useRef(0);
   const segActiveMs = useRef(0);
   const totalBefore = useRef(segments.reduce((n, s) => n + s.durationSec * 1000, 0));
-  const lastSound = useRef(Date.now());
+  const lastSound = useRef(0);
   const segBytes = useRef(0);
   const segTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const segmentsRef = useRef(segments);
@@ -97,6 +97,8 @@ export default function Recorder({
     tick();
   }, []);
 
+  // Lets a finished segment start the next one without the callback referring to itself.
+  const startSegmentRef = useRef<() => void>(() => {});
   const startSegment = useCallback(() => {
     const s = stream.current;
     if (!s) return;
@@ -126,7 +128,7 @@ export default function Recorder({
       segIndex.current++;
       if (stopping.current === 'segment') {
         stopping.current = null;
-        startSegment();
+        startSegmentRef.current();
       }
     };
     rec.start(TIMESLICE_MS);
@@ -138,6 +140,9 @@ export default function Recorder({
       }
     }, SEGMENT_MS);
   }, [draftId, onSegmentsChange]);
+  useEffect(() => {
+    startSegmentRef.current = startSegment;
+  }, [startSegment]);
 
   const start = async () => {
     setError('');

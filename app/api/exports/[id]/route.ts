@@ -1,29 +1,35 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { errorResponse } from '@/lib/api';
 import { assertCanExport } from '@/lib/encounter-status';
-import { renderRecordPdf, pdfFilename } from '@/lib/exports/pdf';
+import { limit } from '@/lib/ratelimit';
+import { buildExportDoc } from '@/lib/exports/data';
+import { CONTENT_TYPES, exportFilename, renderExport } from '@/lib/exports/render';
 import { getRecordDetail, recordExport } from '@/lib/records/service';
+import { exportWatermark } from '@/lib/billing/entitlements';
 
 export const runtime = 'nodejs';
 
 /**
- * GET /api/exports/:id — branded PDF of a signed-off record.
+ * GET /api/exports/:id — English PDF of one signed-off record (the quick download link).
  * The export gate reads the status from the database; the client cannot override it.
+ * Finals can always be exported, with or without an active pass.
  */
-export async function GET(_request: Request, ctx: RouteContext<'/api/exports/[id]'>) {
+export async function GET(_request: NextRequest, ctx: RouteContext<'/api/exports/[id]'>) {
   const { id } = await ctx.params;
   try {
     const auth = await requireAuth();
+    await limit('export', auth.userId);
     const record = await getRecordDetail(auth, id);
     assertCanExport(record.status);
-    const pdf = await renderRecordPdf(record, auth.orgName ?? 'Personal workspace');
+    const doc = await buildExportDoc(auth, { encounterIds: [id] }, { lang: 'eng', watermark: await exportWatermark(auth.userId, auth.orgId) });
+    const pdf = await renderExport(doc, 'pdf');
     await recordExport(auth, id, 'pdf');
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${pdfFilename(id)}"`,
+        'Content-Type': CONTENT_TYPES.pdf,
+        'Content-Disposition': `attachment; filename="${exportFilename(doc, 'pdf')}"`,
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },
