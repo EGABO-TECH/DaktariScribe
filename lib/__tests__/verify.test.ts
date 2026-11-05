@@ -116,3 +116,18 @@ describe('injected errors are caught', () => {
     expect(r.summary.blocking).toBe(1);
   });
 });
+
+describe('unclear audio flags', () => {
+  it('flags lines whose span covers low-confidence words, without blocking', async () => {
+    const { flagUnclearAudio, uncertainRanges } = await import('@/lib/verify/audio');
+    const rec: RefinedRecord = {
+      sections: [{ key: 'notes', lines: [{ text: 'Given artemether.', spans: [{ sourceId: 'a', start: 0, end: 17 }] }, { text: 'Fever.', spans: [{ sourceId: 'a', start: 30, end: 36 }] }] }],
+      fields: [],
+    };
+    const ranges = uncertainRanges('a', [{ charStart: 0, charEnd: 17, lowConfidence: ['artemether'] }, { charStart: 30, charEnd: 36, lowConfidence: [] }]);
+    const out = flagUnclearAudio(rec, ranges);
+    expect(out.sections[0].lines[0].flags?.[0]).toMatchObject({ kind: 'unclear_audio' });
+    expect(out.sections[0].lines[1].flags).toBeUndefined();
+    expect(countBlockingFlags(out)).toBe(0);
+  });
+});
