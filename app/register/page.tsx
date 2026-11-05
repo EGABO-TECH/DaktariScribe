@@ -231,15 +231,10 @@ export default function RegisterPage() {
 
   return (
     <div className="force-light min-h-screen bg-[#eef6f5] text-[#0d2240]">
-      <div className="mx-auto flex min-h-screen w-full max-w-[460px] flex-col px-4 py-8 sm:py-12">
-        <Link href="/" className="mb-8 inline-flex items-center gap-2.5 self-start rounded-lg" aria-label="DaktariScribe home">
-          <Image src="/assets/report-mark.png" alt="" width={36} height={36} priority />
-          <span className="font-display-lg text-[20px] font-bold tracking-tight text-[#0d2240]">DaktariScribe</span>
-        </Link>
-
+      <div className="mx-auto flex min-h-screen w-full max-w-[460px] flex-col justify-center px-4 py-8 sm:py-12">
         <main id="main" className="overflow-hidden rounded-2xl border border-[#d0e8e4] bg-white shadow-2xl shadow-[rgba(0,185,150,0.10)]">
           <div
-            className="relative overflow-hidden px-6 pb-6 pt-7 sm:px-8"
+            className="relative flex flex-col items-center overflow-hidden px-6 pb-7 pt-8 text-center sm:px-8"
             style={{ background: "linear-gradient(145deg, #0d2240 0%, #1a3a5c 60%, #00956e 100%)" }}
           >
             <div
@@ -247,6 +242,13 @@ export default function RegisterPage() {
               style={{ background: "radial-gradient(ellipse 70% 60% at 50% 120%, rgba(0,185,150,0.28) 0%, transparent 70%)" }}
               aria-hidden="true"
             />
+            <Link
+              href="/"
+              aria-label="DaktariScribe home"
+              className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-3 shadow-lg transition-transform hover:scale-[1.03]"
+            >
+              <Image src="/assets/DaktariScribe-Favicon.png" alt="DaktariScribe" width={56} height={56} className="object-contain" priority />
+            </Link>
             <h1 className="relative font-display-lg text-[26px] font-bold leading-tight tracking-tight text-white">
               {step === "details" ? "Create your account" : "Check your email"}
             </h1>
