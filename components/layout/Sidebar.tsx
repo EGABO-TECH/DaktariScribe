@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { NAV_LINKS, isActive as matchActive } from './nav-links';
-import { draftStore } from '@/lib/offline/db';
+import { wipeDevice } from '@/lib/offline/db';
+import { lock } from '@/lib/offline/crypto';
+import { pendingCount } from '@/lib/offline/outbox';
 
 
 export default function Sidebar() {
@@ -16,9 +18,12 @@ export default function Sidebar() {
     const router = useRouter();
 
     const handleSignOut = async () => {
-        // Drafts on this device belong to this user; remove them before signing out.
+        // Logging out wipes everything stored on this device (spec Phase 4.3).
         try {
-            await draftStore.clear();
+            const waiting = await pendingCount().catch(() => 0);
+            if (waiting > 0 && !window.confirm(`${waiting} encounter(s) have not uploaded yet. Signing out deletes them from this device. Sign out anyway?`)) return;
+            lock();
+            await wipeDevice();
         } catch {
             /* IndexedDB unavailable */
         }

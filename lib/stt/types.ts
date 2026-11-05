@@ -9,6 +9,11 @@ export type TranscriptSegment = {
   lowConfidence?: string[];
   engine: 'assemblyai' | 'sunbird';
   file: number;
+  /** Seconds from the start of the whole recording at which this segment's file begins. */
+  fileOffset?: number;
+  /** Character range of this segment in source.rawText (set when the transcript text is built). */
+  charStart?: number;
+  charEnd?: number;
 };
 
 export type SegmentTranscript = {

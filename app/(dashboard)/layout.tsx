@@ -3,9 +3,11 @@ import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import OfflineBanner from '@/components/layout/OfflineBanner';
+import DeviceProvider from '@/components/offline/DeviceProvider';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
+    <DeviceProvider>
     <div className="flex min-h-screen overflow-hidden bg-background font-body-md text-on-background">
       <a
         href="#main"
@@ -21,5 +23,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       <BottomNav />
     </div>
+    </DeviceProvider>
   );
 }

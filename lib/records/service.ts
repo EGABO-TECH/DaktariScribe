@@ -118,11 +118,13 @@ const attachmentInput = z.object({
   files: z.number().int().min(1).max(48),
   bytes: z.number().int().min(1).max(500 * 1024 * 1024),
   name: z.string().max(200).optional(),
+  /** Client-side reference so the device can match upload slots to local files on retry. */
+  clientRef: z.string().max(64).optional(),
 });
 
 export const createEncounterInput = z
   .object({
-    idempotencyKey: z.string().uuid(),
+    idempotencyKey: z.uuid(),
     templateId: z.string().min(1).max(100),
     site: z.string().trim().min(1).max(120),
     encounterDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -131,7 +133,7 @@ export const createEncounterInput = z
     interviewLanguage: z.enum(INTERVIEW_LANGUAGE_CODES),
     text: z.string().max(100_000).optional().default(''),
     attachments: z.array(attachmentInput).max(20).optional().default([]),
-    deviceCreatedAt: z.string().datetime().optional(),
+    deviceCreatedAt: z.iso.datetime().optional(),
   })
   .superRefine((v, ctx) => {
     if (!v.text.trim() && v.attachments.length === 0) ctx.addIssue({ code: 'custom', message: 'Add a note, a recording or a file first.', path: ['text'] });
@@ -145,7 +147,12 @@ export type CreateEncounterInput = z.input<typeof createEncounterInput>;
 /** Alias kept for the typed-note path and tests. */
 export const createTextEncounterInput = createEncounterInput;
 
-export type CreatedEncounter = { id: string; created: boolean; status: EncounterStatus; uploads: { sourceId: string; kind: string; files: number }[] };
+export type CreatedEncounter = {
+  id: string;
+  created: boolean;
+  status: EncounterStatus;
+  uploads: { sourceId: string; kind: string; files: number; clientRef: string | null }[];
+};
 
 async function existingByKey(ctx: AuthContext, key: string): Promise<CreatedEncounter | null> {
   const db = getDb();
@@ -156,14 +163,16 @@ async function existingByKey(ctx: AuthContext, key: string): Promise<CreatedEnco
     .limit(1);
   if (!row) return null;
   const srcs = await db
-    .select({ id: source.id, kind: source.kind, files: source.fileCount, status: source.status })
+    .select({ id: source.id, kind: source.kind, files: source.fileCount, status: source.status, meta: source.meta })
     .from(source)
     .where(eq(source.encounterId, row.id));
   return {
     id: row.id,
     created: false,
     status: row.status,
-    uploads: srcs.filter((s) => s.status === 'pending_upload').map((s) => ({ sourceId: s.id, kind: s.kind, files: s.files })),
+    uploads: srcs
+      .filter((s) => s.status === 'pending_upload')
+      .map((s) => ({ sourceId: s.id, kind: s.kind, files: s.files, clientRef: (s.meta?.clientRef as string | undefined) ?? null })),
   };
 }
 
@@ -216,7 +225,7 @@ export async function createEncounter(
       language: input.interviewLanguage,
       status: 'pending_upload',
       fileCount: a.files,
-      meta: a.name ? { fileName: a.name.slice(0, 200) } : null,
+      meta: { fileName: a.name?.slice(0, 200) ?? null, clientRef: a.clientRef ?? null },
     });
   }
 
@@ -250,7 +259,9 @@ export async function createEncounter(
   await audit(ctx, 'encounter.create', 'encounter', id, { sources: sources.length });
   logger.info('encounter.created', { encounterId: id, orgId: ctx.orgId });
 
-  const uploads = sources.filter((s) => s.status === 'pending_upload').map((s) => ({ sourceId: s.id!, kind: s.kind, files: s.fileCount ?? 1 }));
+  const uploads = sources
+    .filter((s) => s.status === 'pending_upload')
+    .map((s) => ({ sourceId: s.id!, kind: s.kind, files: s.fileCount ?? 1, clientRef: (s.meta?.clientRef as string | null) ?? null }));
   if (!uploads.length) {
     const { dispatch } = await import('@/lib/jobs/dispatch');
     await dispatch({ name: 'encounter/refine.requested', data: { encounterId: id, requestedBy: ctx.userId } });
@@ -416,8 +427,29 @@ export type RecordDetail = {
   status: EncounterStatus;
   createdAt: Date;
   template: { id: string; name: string; version: number; definition: TemplateDefinition };
-  sources: { id: string; kind: string; engine: string | null; rawText: string | null; createdAt: Date }[];
-  currentVersion: { id: string; versionNo: number; createdBy: string; createdAt: Date; content: RefinedRecord } | null;
+  sources: {
+    id: string;
+    kind: string;
+    engine: string | null;
+    rawText: string | null;
+    createdAt: Date;
+    status: string;
+    error: string | null;
+    mimeType: string | null;
+    fileCount: number;
+    durationSec: number | null;
+    /** Audio: [{start,end,text,speaker?,lowConfidence?,file}] · documents: [{page,text}] */
+    segments: unknown[] | null;
+    meta: Record<string, unknown> | null;
+  }[];
+  currentVersion: {
+    id: string;
+    versionNo: number;
+    createdBy: string;
+    createdAt: Date;
+    content: RefinedRecord;
+    verification: Record<string, unknown> | null;
+  } | null;
   versions: { id: string; versionNo: number; createdBy: string; createdAt: Date }[];
   signoff: { signerId: string; signerName: string; signedAt: Date; statement: string } | null;
 };
@@ -441,6 +473,7 @@ export async function getRecordDetail(ctx: AuthContext, id: string, opts: { audi
         createdBy: refinedVersion.createdBy,
         createdAt: refinedVersion.createdAt,
         content: refinedVersion.content,
+        verification: refinedVersion.verification,
       })
       .from(refinedVersion)
       .where(eq(refinedVersion.encounterId, enc.id))
@@ -477,6 +510,13 @@ export async function getRecordDetail(ctx: AuthContext, id: string, opts: { audi
       engine: s.engine,
       rawText: s.rawText ? decryptString(s.rawText) : null,
       createdAt: s.createdAt,
+      status: s.status,
+      error: s.error,
+      mimeType: s.mimeType,
+      fileCount: s.fileCount,
+      durationSec: s.durationSec,
+      segments: s.segments ? decryptJson<unknown[]>(s.segments) : null,
+      meta: (s.meta as Record<string, unknown> | null) ?? null,
     })),
     currentVersion: current
       ? {
@@ -485,6 +525,7 @@ export async function getRecordDetail(ctx: AuthContext, id: string, opts: { audi
           createdBy: current.createdBy,
           createdAt: current.createdAt,
           content: refinedRecord.parse(decryptJson(current.content)),
+          verification: (current.verification as Record<string, unknown> | null) ?? null,
         }
       : null,
     versions: versionRows.map((v) => ({ id: v.id, versionNo: v.versionNo, createdBy: v.createdBy, createdAt: v.createdAt })),

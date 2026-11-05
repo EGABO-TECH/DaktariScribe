@@ -51,16 +51,29 @@ export function guardSegments(segments: TranscriptSegment[]): { segments: Transc
   return { segments: kept, report };
 }
 
-/** Plain text for refinement, with speaker turns on their own lines. */
+/**
+ * Plain text for refinement, with speaker turns on their own lines. Also records each
+ * segment's character range in that text so review can jump from a line to the audio.
+ */
 export function transcriptText(segments: TranscriptSegment[]): string {
-  const lines: string[] = [];
+  return buildTranscript(segments).text;
+}
+
+export function buildTranscript(segments: TranscriptSegment[]): { text: string; segments: TranscriptSegment[] } {
+  let text = '';
   let lastSpeaker: string | undefined;
+  const out: TranscriptSegment[] = [];
   for (const s of segments) {
+    let prefix: string;
     if (s.speaker && s.speaker !== lastSpeaker) {
-      lines.push(`${s.speaker}: ${s.text}`);
+      prefix = (text ? '\n' : '') + s.speaker + ': ';
       lastSpeaker = s.speaker;
-    } else if (s.speaker && lines.length) lines[lines.length - 1] += ` ${s.text}`;
-    else lines.push(s.text);
+    } else if (s.speaker) prefix = ' ';
+    else prefix = text ? '\n' : '';
+    text += prefix;
+    const charStart = text.length;
+    text += s.text;
+    out.push({ ...s, charStart, charEnd: text.length });
   }
-  return lines.join('\n');
+  return { text, segments: out };
 }
