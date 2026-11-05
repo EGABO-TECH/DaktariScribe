@@ -21,6 +21,8 @@ import { logger } from '@/lib/logger';
 import { recordFromSources, type RefinedRecord } from '@/lib/records/refined-record';
 import { templateDefinition } from '@/lib/templates/definition';
 import { verifyRecord, type VerificationSummary } from '@/lib/verify';
+import { flagUnclearAudio, uncertainRanges } from '@/lib/verify/audio';
+import { decryptJson } from '@/lib/crypto';
 
 const { encounter, source, refinedVersion, template } = schema;
 
@@ -80,7 +82,11 @@ export async function runRefinement(encounterId: string, opts: RefineOptions = {
       const mapped = ensureCoverage(toRefinedRecord(output, { sentences: prompt.sentences, sources, def, map: prompt.map }), prompt.sentences);
       const fields = def.sections.flatMap((s) => s.fields);
       const result = verifyRecord({ sources, record: mapped, fields });
-      content = result.record;
+      // Words heard with low confidence mark the lines that use them (non-blocking).
+      const ranges = srcRows
+        .filter((s) => s.kind === 'audio' && s.segments)
+        .flatMap((s) => uncertainRanges(s.id, decryptJson<{ charStart?: number; charEnd?: number; lowConfidence?: string[] }[]>(s.segments!)));
+      content = flagUnclearAudio(result.record, ranges);
       createdBy = 'ai';
       verification = { ...result.summary, mode: 'organised' };
     } catch (err) {
