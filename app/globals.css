@@ -245,69 +245,26 @@ body {
   overflow-x: hidden;
 }
 
-/* ── Glass Card ───────────────────────────────────────────── */
-.glass-card {
-  background: rgba(13, 34, 64, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 8px 32px rgba(6, 15, 26, 0.18);
-  transition: transform 0.28s ease, border-color 0.2s ease, background 0.2s ease;
-}
-.glass-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(77, 217, 192, 0.22);
-  background: rgba(13, 34, 64, 0.65);
-}
-
-/* ── Hero Background ──────────────────────────────────────── */
-.hero-bg {
-  background-image:
-    linear-gradient(135deg, rgba(13, 34, 64, 0.88) 0%, rgba(0, 185, 150, 0.72) 100%),
-    url('/assets/Hero-section.jpg');
-  background-size: cover;
-  background-position: center center;
-  background-blend-mode: multiply;
-}
-
-/* ── Primary Gradient ─────────────────────────────────────── */
-.primary-gradient {
-  background: linear-gradient(135deg, #0d2240 0%, #00b896 100%);
-}
-
-/* ── Name Gradient (teal text) ────────────────────────────── */
-.name-gradient {
-  background: linear-gradient(90deg, #4dd9c0 0%, #00b896 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 800;
-}
-
 /* ── Teal CTA Button ──────────────────────────────────────── */
 .btn-ds-primary {
-  background: linear-gradient(135deg, #0d2240 0%, #00b896 100%);
+  background: #001d3d;
   color: #ffffff;
-  padding: 1rem 1.5rem;
-  border-radius: 0.875rem;
-  font-weight: 700;
+  padding: 0 1.5rem;
+  min-height: 48px;
+  border-radius: 0.5rem;
+  font-weight: 600;
   font-size: 15px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: filter 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
-  box-shadow: 0 8px 24px rgba(0, 185, 150, 0.25);
+  transition: background-color 0.15s ease;
   border: none;
   cursor: pointer;
 }
 .btn-ds-primary:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 12px 32px rgba(0, 185, 150, 0.35);
-}
-.btn-ds-primary:active {
-  transform: scale(0.985);
+  background: #0d2f57;
 }
 
 /* ── Form Input ───────────────────────────────────────────── */
@@ -353,49 +310,12 @@ body {
   white-space: nowrap;
 }
 
-/* ── Pulse Animation (recording indicator) ────────────────── */
-@keyframes ds-pulse {
-  0%   { box-shadow: 0 0 0 0   rgba(0, 185, 150, 0.7); }
-  70%  { box-shadow: 0 0 0 6px rgba(0, 185, 150, 0); }
-  100% { box-shadow: 0 0 0 0   rgba(0, 185, 150, 0); }
-}
-.ds-pulse { animation: ds-pulse 2s infinite; }
-
-/* ── Wave Animation (spectrum bars) ──────────────────────── */
-@keyframes ds-wave {
-  0%, 100% { transform: scaleY(0.45); }
-  50%       { transform: scaleY(1.55); }
-}
-.ds-wave-bar {
-  display: inline-block;
-  width: 3px;
-  border-radius: 9999px;
-  background: #4dd9c0;
-  animation: ds-wave 1.2s ease-in-out infinite;
-  transform-origin: bottom;
-}
-
-/* ── Shimmer / Skeleton ───────────────────────────────────── */
-@keyframes ds-shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-
-/* ── Scroll-fade-in ───────────────────────────────────────── */
-@keyframes ds-fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.ds-fade-up {
-  animation: ds-fade-up 0.55s ease both;
-}
-
 /* ── Material Symbols ─────────────────────────────────────── */
 @font-face {
   font-family: 'Material Symbols Outlined';
   font-style: normal;
   font-weight: 100 700;
-  font-display: swap;
+  font-display: block; /* hide icon names (ligatures) until the font loads; never show raw words */
   src: url(https://fonts.gstatic.com/s/materialsymbolsoutlined/v382/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsI.woff2) format('woff2');
 }
 
@@ -514,26 +434,29 @@ body {
   line-height: 1.7;
 }
 
-/* Dictation Glow Animation */
-@keyframes pulse-glow {
-    0% {
-        box-shadow: 0 0 0 0 rgba(0, 107, 92, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(0, 107, 92, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(0, 107, 92, 0);
-    }
-}
-.dictating {
-    animation: pulse-glow 2s infinite;
-    border-color: #006b5c !important;
-}
-/* Ambient Shadow for active cards */
-.ambient-shadow {
-    box-shadow: 0 8px 32px -8px rgba(0, 29, 61, 0.12);
-}
 .icon-fill {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ── Always-light scope (auth pages match the light landing page) ── */
+.force-light {
+  color-scheme: light;
+  --color-background: #f6fafd;
+  --color-surface: #f6fafd;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f0f4f7;
+  --color-surface-container: #eaeef1;
+  --color-surface-container-high: #e5e9ec;
+  --color-on-background: #171c1f;
+  --color-on-surface: #171c1f;
+  --color-on-surface-variant: #43474f;
+  --color-outline: #737780;
+  --color-outline-variant: #c3c6d0;
+  --color-primary: #001d3d;
+  --color-on-primary: #ffffff;
+  --color-secondary: #006b5c;
+  --color-on-secondary: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
 }

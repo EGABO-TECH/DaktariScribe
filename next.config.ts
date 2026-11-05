@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: true,
   poweredByHeader: false,
+  // Dev runs on Turbopack (the service worker is disabled in dev); production builds use webpack.
+  turbopack: {},
   // Export routes read fonts and the report logo from disk; ship them with the functions.
   outputFileTracingIncludes: {
     "/api/exports": ["./public/fonts/*.ttf", "./public/assets/report-mark.png"],

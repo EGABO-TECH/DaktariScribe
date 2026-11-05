@@ -62,9 +62,19 @@ export default async function RootLayout({
           />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          {/* Icon font preloaded so icons appear quickly (globals.css @font-face uses the same URL). */}
+          {/* eslint-disable-next-line @next/next/google-font-preconnect -- preload of the font file, preconnect is above */}
+          <link
+            rel="preload"
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+            href="https://fonts.gstatic.com/s/materialsymbolsoutlined/v382/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsI.woff2"
+          />
+          {/* eslint-disable-next-line @next/next/google-font-display -- icon font: block hides ligature names instead of flashing words */}
           <link
             rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
           />
         </head>
         <body className="h-full bg-[#f0f7f6] text-[#0d2240] overflow-x-hidden">
