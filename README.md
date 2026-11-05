@@ -62,7 +62,10 @@ The result: **critical clinical data is lost, delayed, or never recorded**, impa
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) | Utility-first design system with custom design tokens |
 | **Authentication** | [Clerk](https://clerk.com/) | Drop-in auth: email/password, Google SSO, email verification |
 | **Icons** | [Google Material Symbols](https://fonts.google.com/icons) | Outlined icon set loaded via Google Fonts CDN |
-| **Typography** | [Inter (Google Fonts)](https://fonts.google.com/specimen/Inter) | Modern, legible sans-serif for medical UIs |
+| **Typography** | Inter + Hanken Grotesk (next/font) | Body and headline fonts |
+| **Database** | Neon Postgres + Drizzle ORM + Zod | Records, versions, sign-offs, audit log |
+| **On-device storage** | Dexie (IndexedDB) | Drafts saved while typing |
+| **PDF** | @react-pdf/renderer | Branded field reports |
 | **Image Optimisation** | Next.js Image (AVIF/WebP) | Automatic format conversion and lazy loading |
 | **PostCSS** | PostCSS + postcss-preset-env | CSS transformation and cross-browser compatibility |
 
@@ -127,39 +130,37 @@ flowchart TD
 ```
 DaktariScribe/
 ├── app/
-│   ├── (dashboard)/              # Protected route group
-│   │   ├── field-entry/          # Voice & manual dictation workspace
-│   │   ├── saved-records/        # Historical records browser with filters
-│   │   ├── reports/              # PDF report generator
-│   │   └── layout.tsx            # Dashboard shell (Sidebar + Header + BottomNav)
-│   ├── register/                 # Account creation with email verification
-│   ├── forgot-password/          # Password reset flow
-│   ├── sso-callback/             # Google OAuth callback handler
-│   ├── legal/                    # Terms of Service & Privacy Policy
-│   ├── layout.tsx                # Root layout (ClerkProvider, Inter font, globals)
-│   └── page.tsx                  # Landing page (HeroSection + LoginSection)
+│   ├── (dashboard)/
+│   │   ├── field-entry/          # Capture: encounter details + typed note, autosaved on the device
+│   │   ├── saved-records/        # Server-paginated list with filters and status badges
+│   │   ├── records/[id]/         # Record detail: version, edit, sign-off, original notes, history
+│   │   ├── reports/              # Final (signed-off) records grouped by month/day, PDF download
+│   │   └── layout.tsx            # Shell: Sidebar + Header + BottomNav + offline banner
+│   ├── api/
+│   │   ├── encounters/           # POST create (Process); [id]/versions (edit); [id]/signoff
+│   │   └── exports/[id]/         # GET branded PDF (Final records only)
+│   ├── register/ forgot-password/ sso-callback/ legal/
+│   └── layout.tsx / page.tsx
 ├── components/
-│   ├── landing/
-│   │   ├── HeroSection.tsx       # Animated hero with features bento grid
-│   │   ├── LoginSection.tsx      # Sign-in form (email + Google SSO)
-│   │   ├── FeatureCard.tsx       # Feature bento card with glassmorphism
-│   │   └── LandingFooter.tsx     # Footer with legal links
-│   ├── layout/
-│   │   ├── Sidebar.tsx           # Desktop navigation sidebar
-│   │   ├── Header.tsx            # Top app bar
-│   │   └── BottomNav.tsx         # Mobile bottom navigation
-│   └── reports/
-│       └── ReportCard.tsx        # Individual report card with download action
-├── public/
-│   └── assets/
-│       ├── DaktariScribe-Full-Logo.png
-│       ├── DaktariScribe-Logo-Tagline.png
-│       ├── DaktariScribe-Favicon.png
-│       └── Hero-section.jpg
-├── middleware.ts                  # Clerk route protection
-├── next.config.ts                 # Next.js config (AVIF/WebP image formats)
-├── theme.css                      # Custom design tokens & CSS variables
-└── package.json
+│   ├── capture/FieldEntry.tsx    # Type tab, autosave, drafts on this device
+│   ├── records/                  # StatusBadge, RecordBody, RecordEditor, SignOffPanel
+│   ├── exports/RecordPdf.tsx     # @react-pdf/renderer report layout
+│   └── layout/ landing/ legal/
+├── db/
+│   ├── schema.ts                 # Drizzle schema (spec §4)
+│   ├── migrations/               # drizzle-kit SQL migrations
+│   └── seed.ts                   # Global templates
+├── lib/
+│   ├── auth.ts                   # Clerk wrapper → { userId, orgId, role }
+│   ├── crypto.ts                 # AES-256-GCM field encryption with key versions
+│   ├── records/service.ts        # All record queries, scoped by org (and by worker for workers)
+│   ├── offline/db.ts             # Dexie draft store (codec-ready for Phase 4 encryption)
+│   ├── templates/                # Template schema (Zod) + global templates
+│   └── encounter-status.ts       # Export and sign-off gates
+├── scripts/check-copy.ts         # CI check for banned "AI-looking" copy (spec §1.5)
+├── proxy.ts                      # Clerk route protection (Next.js 16 "proxy", formerly middleware)
+├── PRODUCT.md / DESIGN.md        # Product context and design system
+└── DAKTARISCRIBE_BUILD_SPEC.md   # The phased build plan
 ```
 
 ---
@@ -170,7 +171,7 @@ DaktariScribe/
 
 Make sure you have the following installed:
 
-- **Node.js** `>= 18.x` — [Download](https://nodejs.org/)
+- **Node.js** `>= 20.9` — [Download](https://nodejs.org/)
 - **npm** `>= 9.x` (bundled with Node.js)
 - A **Clerk** account and application — [clerk.com](https://clerk.com/)
 
@@ -197,7 +198,14 @@ cp .env.example .env.local
 openssl rand -base64 32
 ```
 
-### 4. Run the Development Server
+### 4. Create the database
+
+```bash
+npm run db:migrate   # applies db/migrations to DATABASE_URL
+npm run db:seed      # inserts the global templates
+```
+
+### 5. Run the Development Server
 
 ```bash
 npm run dev
@@ -205,7 +213,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-### 5. Build for Production
+### 6. Build for Production
 
 ```bash
 npm run build
@@ -214,42 +222,27 @@ npm start
 
 ---
 
-## 🔑 Key Features Walkthrough
+## 🔑 What works today (Phase 1)
 
-### 🏠 Landing & Authentication
-- Split-screen landing page: animated hero on the left, sign-in card on the right
-- **Google SSO** one-click login via Clerk OAuth
-- **Email/Password** login with show/hide password toggle
-- **Registration** with two-step email verification (6-digit OTP)
-- **Forgot Password** recovery flow
-- Route-level protection via `middleware.ts` — unauthenticated users are redirected to login
+- **Field Entry** (`/field-entry`): template, site, date, respondent reference, interview language and a required consent checkbox. The **Type** tab autosaves to the device every 3 s and on blur. **Save draft** keeps it on the device; **Process** creates the record on the server (retries never create duplicates). **Record** and **Upload** are marked *coming soon*.
+- **Saved Records** (`/saved-records`): server-side pagination; filters for record ID, date range, site, status and (supervisors) worker.
+- **Record detail** (`/records/[id]`): the current version, edits saved as new versions, sign-off by the author, the original note exactly as typed, and history.
+- **Reports** (`/reports`): signed-off records grouped by month and day, each with a **PDF** download.
+- **PDF report**: logo, record ID, site, date, author, sections, fields table with *Not recorded* for blanks, sign-off block, provenance line, and the confidentiality notice with page numbers on every page.
 
-### 🎙️ Field Entry (`/field-entry`)
-- Toggle between **Dictation** mode and **Manual Entry** mode
-- Animated waveform visualiser during live recording
-- Recording controls: **Start**, **Pause**, **Stop**
-- **Add to Record** saves the encounter with a cryptographic Nano ID (`DS-YYYY-DD-MM-NANO-XXXX`)
-
-### 📁 Saved Records (`/saved-records`)
-- Tabular view of all historical encounter records
-- **Search** by Record ID, filter by **Date Range** and **Outreach Location**
-- Paginated results with page navigation controls
-
-### 📊 Reports Generator (`/reports`)
-- Encounter records rendered as printable **Field Report Cards**
-- Records grouped chronologically by **Month/Year** and **Day**
-- Each card shows: Record ID, Date/Time, Location, Healthcare Worker, Clinical Recording transcript
-- **Download as PDF** triggers the browser print dialog for instant offline-ready reports
+Not built yet: voice recording, uploads, automated organising of notes, offline sync, translation, Word/slide exports and billing. See the build spec for the phase plan.
 
 ---
 
-## 🛡️ Security & Compliance
+## 🛡️ Security & Privacy (current state)
 
-- **Authentication** — All dashboard routes are protected via Clerk middleware; unauthenticated access is blocked server-side
-- **Encrypted Sessions** — Clerk handles session tokens using industry-standard JWT + RS256 signing
-- **Nano ID Record Integrity** — Each clinical record gets a cryptographically random ID to prevent tampering or enumeration
-- **Confidentiality Notice** — All exported reports carry a legal notice: *"Information contained herein is strictly confidential and intended for authorized medical personnel only."*
-- **Terms & Privacy** — Users must agree to Terms of Service and Privacy Policy during registration
+- **Access control**: every query is scoped to the user's organisation; workers see only their own records. Records outside your scope return *not found*.
+- **Field encryption**: respondent references, original notes and record content are encrypted with AES-256-GCM before they are written to the database.
+- **Originals are immutable**: edits create new versions; the typed original is never changed.
+- **Sign-off gate**: only signed-off (Final) records can be exported, enforced on the server from the stored status.
+- **Logs**: the server logger drops note text and other content fields.
+- **Audit log**: record creation, views, edits, sign-off and exports are recorded (without patient content).
+- Not yet: MFA, security headers/CSP, rate limiting, device encryption (Phases 4 and 6).
 
 ---
 
