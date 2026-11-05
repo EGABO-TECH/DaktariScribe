@@ -1,111 +1,153 @@
+"use client";
+
 import Image from "next/image";
-import { CheckIcon, KeyboardIcon, MicIcon, ShieldIcon, SignIcon, UploadIcon, WifiOffIcon } from "@/components/ui/Icons";
+import FeatureCard from "./FeatureCard";
 
-/**
- * Landing hero. Brief and clinical: one claim, how capture works, and a small preview of the
- * actual output (a signed field report whose values trace back to the original note).
- * Solid brand navy, no gradients, glass, glows or entrance animations. Icons are inline SVG
- * so nothing flashes while fonts load.
- */
-
-const CAPTURE = [
-  { Icon: KeyboardIcon, label: "Type" },
-  { Icon: MicIcon, label: "Record" },
-  { Icon: UploadIcon, label: "Upload a photo" },
+const FEATURES = [
+  {
+    icon: "mic",
+    title: "Capture in Field",
+    description:
+      "Dictate audio or type medication findings with minimal internet connectivity.",
+    delay: 100,
+  },
+  {
+    icon: "folder_open",
+    title: "Modular Templates",
+    description:
+      "Name and group encounters locally by title and camp location.",
+    delay: 200,
+  },
+  {
+    icon: "fact_check",
+    title: "Organised Reports",
+    description:
+      "Your notes, tidied into a standard record. Nothing added, nothing lost.",
+    delay: 300,
+  },
+  {
+    icon: "picture_as_pdf",
+    title: "PDF Reports",
+    description:
+      "Download signed field reports, ready to print or share.",
+    delay: 400,
+  },
 ];
-
-const TRUST = [
-  { Icon: WifiOffIcon, label: "Works offline" },
-  { Icon: ShieldIcon, label: "Encrypted on the device" },
-  { Icon: SignIcon, label: "You sign off every report" },
-];
-
-function ReportPreview() {
-  const rows: [string, string, boolean][] = [
-    ["Temperature", "38.5 °C", true],
-    ["Malaria RDT", "Positive", true],
-    ["Blood pressure", "Not recorded", false],
-  ];
-  return (
-    <figure className="w-full max-w-[400px] rounded-lg bg-white text-[#171c1f] shadow-[0_24px_48px_-24px_rgba(0,0,0,0.6)]" aria-label="Example of a signed field report">
-      <div className="flex items-center justify-between border-b-2 border-[#001d3d] px-5 pb-3 pt-4">
-        <div>
-          <p className="text-[13px] font-bold text-[#001d3d]">Clinical Field Report</p>
-          <p className="font-label-status text-[11px] text-[#43474f]">DS-2026-14-08-K7QH3MZD-9TRA</p>
-        </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#d7f5ee] px-2 py-0.5 text-[11px] font-semibold text-[#00382f]">
-          <CheckIcon size={13} strokeWidth={2.4} /> Final
-        </span>
-      </div>
-      <dl className="px-5 py-3 text-[13px]">
-        {rows.map(([k, v, recorded]) => (
-          <div key={k} className="flex justify-between gap-4 border-b border-[#e5e9ec] py-2 last:border-0">
-            <dt className="text-[#43474f]">{k}</dt>
-            <dd className={recorded ? "font-semibold" : "italic text-[#5c6068]"}>{v}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mx-5 mb-4 rounded-md border-l-[3px] border-[#006b5c] bg-[#f0f4f7] px-3 py-2 text-[12px] leading-5 text-[#43474f]">
-        From the original note: <span className="font-semibold text-[#171c1f]">&ldquo;temp 38.5, mRDT positive&rdquo;</span>
-      </div>
-      <figcaption className="flex items-center justify-between border-t border-[#e5e9ec] px-5 py-3 text-[12px] text-[#43474f]">
-        <span>Signed off by the clinician</span>
-        <span className="font-label-status">14 Aug 2026</span>
-      </figcaption>
-    </figure>
-  );
-}
 
 export default function HeroSection() {
   return (
     <section
-      className="relative flex w-full flex-col justify-center bg-[#001d3d] px-6 py-12 text-white sm:px-10 lg:min-h-screen lg:w-1/2 lg:px-14 lg:py-16"
-      aria-labelledby="hero-title"
+      className="
+        w-full lg:w-1/2
+        relative overflow-hidden
+        flex flex-col justify-center
+        px-6 sm:px-8 lg:px-14
+        py-10 lg:py-14
+        min-h-[60vh] lg:min-h-screen
+      "
+      aria-label="DaktariScribe brand and features"
     >
-      {/* Single accent rule: the only decoration */}
-      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-[#44ddc1]" />
+      {/* ── Hero Background ── */}
+      <div className="absolute inset-0 hero-bg z-0" />
 
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 lg:mx-0">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1">
-            <Image src="/assets/report-mark.png" alt="" width={32} height={32} priority />
+      {/* ── Gradient fade overlays for depth ── */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-40 pointer-events-none z-10"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent, rgba(0,26,26,0.55))",
+        }}
+      />
+      <div
+        className="absolute inset-y-0 right-0 w-20 pointer-events-none z-10"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, rgba(6,15,26,0.30))",
+        }}
+      />
+
+      {/* ── Content ── */}
+      <div className="relative z-20 max-w-xl flex flex-col gap-5">
+        {/* Brand Row */}
+        <div className="flex items-center gap-3 ds-fade-up" style={{ animationDelay: "0ms" }}>
+          <div className="w-11 h-11 glass-card rounded-xl flex items-center justify-center text-white flex-shrink-0 p-1">
+            <Image
+              src="/assets/DaktariScribe-Favicon.png"
+              alt="DaktariScribe"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
+          </div>
+          <div>
+            <div className="text-[16px] font-black text-white tracking-[0.22em] uppercase leading-none">
+              DaktariScribe
+            </div>
+            <div className="text-[9px] text-white/55 tracking-[0.24em] uppercase mt-0.5">
+              Field notes to finished reports
+            </div>
+          </div>
+        </div>
+
+        {/* Eyebrow Pill */}
+        <div
+          className="ds-fade-up"
+          style={{ animationDelay: "80ms" }}
+        >
+          <span className="inline-flex items-center gap-2 self-start bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-[11px] font-semibold tracking-[0.16em] uppercase px-3.5 py-1.5 rounded-full shadow-sm">
+            <span className="material-symbols-outlined text-[13px] text-[#4dd9c0]">
+              clinical_notes
+            </span>
+            For frontline health teams
           </span>
-          <span className="font-display-lg text-[18px] font-bold tracking-tight">DaktariScribe</span>
         </div>
 
-        <div>
-          <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#44ddc1]">For frontline health teams</p>
-          <h1 id="hero-title" className="mt-3 font-display-lg text-[34px] font-bold leading-[1.1] tracking-tight sm:text-[44px] xl:text-[52px]">
-            Field notes to finished reports.
-          </h1>
-          <p className="mt-4 max-w-md text-[17px] leading-7 text-white/80">
-            Capture an encounter in the field, review a clean record against your own words, and share a signed report, even with weak internet.
-          </p>
+        {/* H1 Heading */}
+        <h1
+          className="font-black text-white leading-[1.15] drop-shadow-md tracking-tight text-2xl sm:text-3xl xl:text-4xl ds-fade-up"
+          style={{ animationDelay: "160ms" }}
+        >
+          Voice and text field notes, turned into{" "}
+          <span className="text-[#4dd9c0]">clear clinical reports.</span>
+        </h1>
+
+        {/* Tagline */}
+        <p
+          className="text-white/72 text-[15px] leading-relaxed max-w-md -mt-1 ds-fade-up"
+          style={{ animationDelay: "220ms" }}
+        >
+          Capture, organise and report clinical encounters in the field, even with weak internet.
+        </p>
+
+        {/* 2 × 2 Feature Bento Grid — 1-col on very small screens, 2-col on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+          {FEATURES.map((feat) => (
+            <FeatureCard key={feat.icon} {...feat} />
+          ))}
         </div>
 
-        {/* How capture works: a plain list, not button-like pills (they are not clickable). */}
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[15px] font-medium text-white" aria-label="Ways to capture">
-          {CAPTURE.map(({ Icon, label }, i) => (
-            <span key={label} className="inline-flex items-center gap-2">
-              {i > 0 && <span aria-hidden="true" className="mr-2 h-4 w-px bg-white/25" />}
-              <Icon size={18} className="text-[#44ddc1]" />
+        {/* Trust badges */}
+        <div
+          className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 ds-fade-up"
+          style={{ animationDelay: "500ms" }}
+        >
+          {[
+            { icon: "lock", label: "Encryption" },
+            { icon: "wifi_off", label: "Offline capture" },
+            { icon: "verified", label: "Clinician sign-off" },
+          ].map(({ icon, label }) => (
+            <span
+              key={label}
+              className="flex items-center gap-1 text-white/60 text-[10.5px] font-semibold tracking-wide uppercase"
+            >
+              <span className="material-symbols-outlined text-[13px] text-[#4dd9c0]">
+                {icon}
+              </span>
               {label}
             </span>
           ))}
-        </p>
-
-        <div className="hidden sm:block">
-          <ReportPreview />
         </div>
-
-        <ul className="flex flex-col gap-2.5 border-t border-white/15 pt-6 text-[14px] text-white/85 sm:flex-row sm:flex-wrap sm:gap-x-6" aria-label="Safeguards">
-          {TRUST.map(({ Icon, label }) => (
-            <li key={label} className="inline-flex items-center gap-2">
-              <Icon size={18} className="text-[#44ddc1]" />
-              {label}
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
