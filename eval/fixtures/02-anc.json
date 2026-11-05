@@ -1,0 +1,3 @@
+{ "id": "02-anc", "templateId": "tpl_antenatal_visit", "language": "eng",
+  "source": "ANC visit 2. GA 24 weeks. BP 110/70, Hb 11.2 g/dL. HIV test negative. Given IPTp dose 1 and iron/folic acid. No danger signs. Next visit 4 weeks.",
+  "facts": ["24 weeks", "110/70", "11.2", "HIV negative", "IPTp dose 1", "iron/folic acid", "no danger signs", "4 weeks"] }

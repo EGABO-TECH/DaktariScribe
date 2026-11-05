@@ -1,0 +1,3 @@
+{ "id": "07-survey", "templateId": "tpl_community_survey", "language": "eng",
+  "source": "Respondent aged 45, female. Household of 6. Uses a mosquito net every night. Nearest health centre is 7 km away. No member sick in the last 2 weeks.",
+  "facts": ["45", "female", "6", "mosquito net", "7 km", "no member sick", "2 weeks"] }

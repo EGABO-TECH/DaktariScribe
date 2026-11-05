@@ -1,0 +1,3 @@
+{ "id": "08-wound", "templateId": "tpl_general_consultation", "language": "eng",
+  "source": "Cut on left hand 2 cm, 1 hour ago, while farming. Wound cleaned and dressed. Tetanus toxoid given. No sutures needed.",
+  "facts": ["2 cm", "1 hour", "left hand", "tetanus toxoid", "no sutures"] }

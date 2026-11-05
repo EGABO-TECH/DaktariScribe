@@ -1,0 +1,3 @@
+{ "id": "04-hypertension", "templateId": "tpl_general_consultation", "language": "eng",
+  "source": "Known HTN on amlodipine 5 mg OD. BP 162/98 today. Not taking meds for 1 week, ran out. No chest pain. Refilled amlodipine 5 mg. Referred to HC IV for review.",
+  "facts": ["amlodipine 5 mg", "162/98", "1 week", "no chest pain", "referred"] }
