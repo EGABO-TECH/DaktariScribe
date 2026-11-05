@@ -36,7 +36,7 @@ function readClerkError(err: unknown, fallback: string) {
 }
 
 const inputBase =
-  "block w-full h-12 rounded-lg border bg-surface-container-lowest px-3.5 text-[16px] text-on-surface placeholder:text-on-surface-variant/70 outline-none transition-[border-color,box-shadow] duration-150 focus:border-secondary focus:ring-[3px] focus:ring-secondary/25 disabled:opacity-60";
+  "block w-full h-12 rounded-lg border bg-[#f0f7f6] px-3.5 text-[16px] text-[#0d2240] placeholder:text-[#8fafc0] outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:bg-white focus:border-[#00b896] focus:ring-[3px] focus:ring-[#00b896]/15 disabled:opacity-60";
 
 function Field({
   id,
@@ -53,7 +53,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[14px] font-semibold text-on-surface">
+      <label htmlFor={id} className="mb-1.5 block text-[14px] font-semibold text-[#0d2240]">
         {label}
       </label>
       {children}
@@ -63,7 +63,7 @@ function Field({
           {error}
         </p>
       ) : hint ? (
-        <div id={`${id}-hint`} className="mt-1.5 text-[13px] text-on-surface-variant">
+        <div id={`${id}-hint`} className="mt-1.5 text-[13px] text-[#3d5a73]">
           {hint}
         </div>
       ) : null}
@@ -97,14 +97,14 @@ function PasswordInput({
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
-        className={`${inputBase} pr-12 ${invalid ? "border-error" : "border-outline"}`}
+        className={`${inputBase} pr-12 ${invalid ? "border-error" : "border-[#d0e8e4]"}`}
       />
       <button
         type="button"
         onClick={() => setShow((v) => !v)}
         aria-label={show ? "Hide password" : "Show password"}
         aria-pressed={show}
-        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-[#8fafc0] hover:bg-[#e0f0ed] hover:text-[#00b896]"
       >
         {show ? <EyeOffIcon /> : <EyeIcon />}
       </button>
@@ -230,14 +230,37 @@ export default function RegisterPage() {
   const lengthOk = password.length >= MIN_PASSWORD;
 
   return (
-    <div className="force-light min-h-screen bg-surface text-on-surface">
+    <div className="force-light min-h-screen bg-[#eef6f5] text-[#0d2240]">
       <div className="mx-auto flex min-h-screen w-full max-w-[460px] flex-col px-4 py-8 sm:py-12">
         <Link href="/" className="mb-8 inline-flex items-center gap-2.5 self-start rounded-lg" aria-label="DaktariScribe home">
           <Image src="/assets/report-mark.png" alt="" width={36} height={36} priority />
-          <span className="font-display-lg text-[20px] font-bold tracking-tight text-primary">DaktariScribe</span>
+          <span className="font-display-lg text-[20px] font-bold tracking-tight text-[#0d2240]">DaktariScribe</span>
         </Link>
 
-        <main id="main" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_1px_2px_rgba(0,29,61,0.06)] sm:p-8">
+        <main id="main" className="overflow-hidden rounded-2xl border border-[#d0e8e4] bg-white shadow-2xl shadow-[rgba(0,185,150,0.10)]">
+          <div
+            className="relative overflow-hidden px-6 pb-6 pt-7 sm:px-8"
+            style={{ background: "linear-gradient(145deg, #0d2240 0%, #1a3a5c 60%, #00956e 100%)" }}
+          >
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(ellipse 70% 60% at 50% 120%, rgba(0,185,150,0.28) 0%, transparent 70%)" }}
+              aria-hidden="true"
+            />
+            <h1 className="relative font-display-lg text-[26px] font-bold leading-tight tracking-tight text-white">
+              {step === "details" ? "Create your account" : "Check your email"}
+            </h1>
+            <p className="relative mt-1.5 text-[15px] text-[#a8f0e6]">
+              {step === "details" ? (
+                "For clinicians and field health workers."
+              ) : (
+                <>
+                  Enter the 6-digit code we sent to <strong className="font-semibold text-white">{email.trim()}</strong>.
+                </>
+              )}
+            </p>
+          </div>
+          <div className="p-6 sm:p-8">
           {general && (
             <div role="alert" className="mb-5 flex items-start gap-2 rounded-lg border border-error/40 bg-error-container px-3.5 py-3 text-[14px] text-on-error-container">
               <AlertIcon size={18} className="mt-px shrink-0" />
@@ -247,23 +270,20 @@ export default function RegisterPage() {
 
           {step === "details" ? (
             <>
-              <h1 className="font-display-lg text-[26px] font-bold leading-tight tracking-tight text-primary">Create your account</h1>
-              <p className="mt-1.5 text-[15px] text-on-surface-variant">For clinicians and field health workers.</p>
-
               <button
                 type="button"
                 onClick={continueWithGoogle}
                 disabled={busy !== false}
-                className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-outline bg-surface-container-lowest text-[15px] font-semibold text-on-surface hover:bg-surface-container-low disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-[#d0e8e4] bg-white text-[15px] font-semibold text-[#0d2240] hover:border-[#00b896] hover:bg-[#f0f7f6] disabled:opacity-60"
               >
                 {busy === "google" ? <Spinner /> : <GoogleIcon />}
                 Continue with Google
               </button>
 
-              <div className="my-6 flex items-center gap-3 text-[13px] text-on-surface-variant" role="separator">
-                <span className="h-px flex-1 bg-outline-variant" />
+              <div className="my-6 flex items-center gap-3 text-[13px] text-[#8fafc0]" role="separator">
+                <span className="h-px flex-1 bg-[#e0f0ed]" />
                 or with your email
-                <span className="h-px flex-1 bg-outline-variant" />
+                <span className="h-px flex-1 bg-[#e0f0ed]" />
               </div>
 
               <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
@@ -276,7 +296,7 @@ export default function RegisterPage() {
                       onChange={(e) => setFirstName(e.target.value)}
                       aria-invalid={!!errors.firstName || undefined}
                       aria-describedby={describedBy("firstName")}
-                      className={`${inputBase} ${errors.firstName ? "border-error" : "border-outline"}`}
+                      className={`${inputBase} ${errors.firstName ? "border-error" : "border-[#d0e8e4]"}`}
                     />
                   </Field>
                   <Field id={id("lastName")} label="Last name" error={errors.lastName}>
@@ -287,7 +307,7 @@ export default function RegisterPage() {
                       onChange={(e) => setLastName(e.target.value)}
                       aria-invalid={!!errors.lastName || undefined}
                       aria-describedby={describedBy("lastName")}
-                      className={`${inputBase} ${errors.lastName ? "border-error" : "border-outline"}`}
+                      className={`${inputBase} ${errors.lastName ? "border-error" : "border-[#d0e8e4]"}`}
                     />
                   </Field>
                 </div>
@@ -304,7 +324,7 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     aria-invalid={!!errors.email || undefined}
                     aria-describedby={describedBy("email")}
-                    className={`${inputBase} ${errors.email ? "border-error" : "border-outline"}`}
+                    className={`${inputBase} ${errors.email ? "border-error" : "border-[#d0e8e4]"}`}
                   />
                 </Field>
 
@@ -313,7 +333,7 @@ export default function RegisterPage() {
                   label="Password"
                   error={errors.password}
                   hint={
-                    <span className={`inline-flex items-center gap-1.5 ${lengthOk ? "text-secondary" : ""}`}>
+                    <span className={`inline-flex items-center gap-1.5 ${lengthOk ? "text-[#00957a]" : ""}`}>
                       {lengthOk ? <CheckIcon size={16} /> : <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />}
                       At least {MIN_PASSWORD} characters
                     </span>
@@ -335,7 +355,7 @@ export default function RegisterPage() {
                   error={errors.confirm}
                   hint={
                     confirm && confirm === password ? (
-                      <span className="inline-flex items-center gap-1.5 text-secondary">
+                      <span className="inline-flex items-center gap-1.5 text-[#00957a]">
                         <CheckIcon size={16} /> Passwords match
                       </span>
                     ) : null
@@ -360,15 +380,15 @@ export default function RegisterPage() {
                       onChange={(e) => setAgreed(e.target.checked)}
                       aria-invalid={!!errors.terms || undefined}
                       aria-describedby={describedBy("terms")}
-                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--color-primary)]"
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded accent-[#0d2240]"
                     />
-                    <span className="text-[14px] leading-6 text-on-surface">
+                    <span className="text-[14px] leading-6 text-[#3d5a73]">
                       I agree to the{" "}
-                      <Link href="/legal/terms" target="_blank" className="font-semibold text-secondary underline-offset-2 hover:underline">
+                      <Link href="/legal/terms" target="_blank" className="font-semibold text-[#00957a] underline-offset-2 hover:underline">
                         Terms
                       </Link>{" "}
                       and{" "}
-                      <Link href="/legal/privacy" target="_blank" className="font-semibold text-secondary underline-offset-2 hover:underline">
+                      <Link href="/legal/privacy" target="_blank" className="font-semibold text-[#00957a] underline-offset-2 hover:underline">
                         Privacy Policy
                       </Link>
                       , and I understand that I review and sign off every report before it is final.
@@ -385,7 +405,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={busy !== false}
-                  className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-70"
+                  className="btn-ds-primary mt-1"
                 >
                   {busy === "submit" ? (
                     <>
@@ -399,12 +419,6 @@ export default function RegisterPage() {
             </>
           ) : (
             <form onSubmit={handleVerify} noValidate className="flex flex-col gap-5">
-              <div>
-                <h1 className="font-display-lg text-[26px] font-bold leading-tight tracking-tight text-primary">Check your email</h1>
-                <p className="mt-1.5 text-[15px] text-on-surface-variant">
-                  Enter the 6-digit code we sent to <strong className="font-semibold text-on-surface">{email.trim()}</strong>.
-                </p>
-              </div>
               <Field id={id("code")} label="Verification code" error={errors.code}>
                 <input
                   id={id("code")}
@@ -420,13 +434,13 @@ export default function RegisterPage() {
                   }}
                   aria-invalid={!!errors.code || undefined}
                   aria-describedby={describedBy("code")}
-                  className={`${inputBase} text-center font-label-status text-[22px] tracking-[0.5em] ${errors.code ? "border-error" : "border-outline"}`}
+                  className={`${inputBase} text-center font-label-status text-[22px] tracking-[0.5em] ${errors.code ? "border-error" : "border-[#d0e8e4]"}`}
                 />
               </Field>
               <button
                 type="submit"
                 disabled={busy !== false}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-[15px] font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-70"
+                className="btn-ds-primary"
               >
                 {busy === "verify" ? (
                   <>
@@ -444,7 +458,7 @@ export default function RegisterPage() {
                     setCode("");
                     setErrors({});
                   }}
-                  className="inline-flex min-h-12 items-center gap-1.5 rounded-lg px-2 font-semibold text-on-surface-variant hover:text-on-surface"
+                  className="inline-flex min-h-12 items-center gap-1.5 rounded-lg px-2 font-semibold text-[#3d5a73] hover:text-[#0d2240]"
                 >
                   <ArrowLeftIcon size={18} /> Use a different email
                 </button>
@@ -452,24 +466,25 @@ export default function RegisterPage() {
                   type="button"
                   onClick={resend}
                   disabled={resendIn > 0 || busy !== false}
-                  className="min-h-12 rounded-lg px-2 font-semibold text-secondary hover:underline disabled:text-on-surface-variant disabled:no-underline"
+                  className="min-h-12 rounded-lg px-2 font-semibold text-[#00957a] hover:underline disabled:text-[#8fafc0] disabled:no-underline"
                 >
                   {resendIn > 0 ? `Resend code in ${resendIn}s` : busy === "resend" ? "Sending…" : "Resend code"}
                 </button>
               </div>
             </form>
           )}
+          </div>
         </main>
 
         {step === "details" && (
-          <p className="mt-6 text-center text-[14px] text-on-surface-variant">
+          <p className="mt-6 text-center text-[14px] text-[#3d5a73]">
             Already have an account?{" "}
-            <Link href="/" className="font-semibold text-secondary underline-offset-2 hover:underline">
+            <Link href="/" className="font-semibold text-[#00957a] underline-offset-2 hover:underline">
               Sign in
             </Link>
           </p>
         )}
-        <p className="mt-auto pt-10 text-center text-[12px] text-on-surface-variant">© 2026 DaktariScribe</p>
+        <p className="mt-auto pt-10 text-center text-[12px] uppercase tracking-widest text-[#8fafc0]">© 2026 DaktariScribe</p>
       </div>
     </div>
   );

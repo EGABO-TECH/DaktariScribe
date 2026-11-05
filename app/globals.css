@@ -247,24 +247,34 @@ body {
 
 /* ── Teal CTA Button ──────────────────────────────────────── */
 .btn-ds-primary {
-  background: #001d3d;
+  background: linear-gradient(135deg, #0d2240 0%, #00b896 100%);
   color: #ffffff;
   padding: 0 1.5rem;
   min-height: 48px;
-  border-radius: 0.5rem;
-  font-weight: 600;
+  border-radius: 0.75rem;
+  font-weight: 700;
   font-size: 15px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: background-color 0.15s ease;
+  transition: filter 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 185, 150, 0.25);
   border: none;
   cursor: pointer;
 }
 .btn-ds-primary:hover {
-  background: #0d2f57;
+  filter: brightness(1.08);
+  box-shadow: 0 12px 32px rgba(0, 185, 150, 0.35);
+}
+.btn-ds-primary:active {
+  transform: scale(0.985);
+}
+.btn-ds-primary:disabled {
+  filter: none;
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* ── Form Input ───────────────────────────────────────────── */
@@ -476,10 +486,14 @@ body {
   background: rgba(13, 34, 64, 0.65);
 }
 
-/* Brand background, no photo: deep navy into dark clinical teal. */
 .hero-bg {
   background-color: #0d2240;
-  background-image: linear-gradient(140deg, #0d2240 0%, #0b3149 55%, #00564b 100%);
+  background-image:
+    linear-gradient(135deg, rgba(13, 34, 64, 0.88) 0%, rgba(0, 185, 150, 0.72) 100%),
+    url('/assets/Hero-section.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-blend-mode: multiply;
 }
 
 @keyframes ds-fade-up {
