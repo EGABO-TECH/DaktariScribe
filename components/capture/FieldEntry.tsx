@@ -8,6 +8,7 @@ import PinGate from '@/components/offline/PinGate';
 import { useDevice } from '@/components/offline/DeviceProvider';
 import Recorder from './Recorder';
 import UploadPicker from './UploadPicker';
+import DraftPdfButton from './DraftPdfButton';
 import { db, draftStore, type Draft, type DraftHeader } from '@/lib/offline/db';
 import { discard as discardOutbox, enqueue, onOutboxChange, pendingItems, retry, type OutboxView } from '@/lib/offline/outbox';
 import { INTERVIEW_LANGUAGES } from '@/lib/records/languages';
@@ -362,6 +363,7 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
                 )}
                 {saveState.kind === 'error' && <span className="font-semibold text-error">Could not save on this device</span>}
                 <span>{words} words</span>
+                <DraftPdfButton draft={draft} templateName={templates.find((t) => t.id === draft.header.templateId)?.name ?? ''} />
               </div>
             </div>
             <textarea

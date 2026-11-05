@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Hanken_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,17 +41,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Per-request CSP nonce set by Clerk's middleware in proxy.ts.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <ClerkProvider>
+    <ClerkProvider dynamic nonce={nonce}>
       <html lang="en" className={`${inter.variable} ${hanken.variable} h-full antialiased`} suppressHydrationWarning>
         <head>
           {/* Apply the saved theme before paint to avoid a flash. */}
           <script
+            nonce={nonce}
             dangerouslySetInnerHTML={{
               __html:
                 "try{var t=localStorage.getItem('ds-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}",
