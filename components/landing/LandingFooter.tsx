@@ -29,15 +29,11 @@ export default function LandingFooter() {
         >
           DaktariScribe
         </span>
-        <span className="text-[#d0e8e4] font-thin select-none">|</span>
-        <span className="text-[9px] font-semibold tracking-[0.16em] uppercase text-[#8fafc0]">
-          Clinical Intelligence
-        </span>
       </div>
 
       {/* Copyright */}
       <p className="text-[10px] uppercase tracking-widest text-[#8fafc0] text-center max-w-xs">
-        &copy; 2026 DaktariScribe Clinical Pharma Network. All rights reserved.
+        &copy; 2026 DaktariScribe. All rights reserved.
       </p>
 
       {/* Links */}

@@ -19,40 +19,20 @@ const FEATURES = [
     delay: 200,
   },
   {
-    icon: "smart_toy",
-    title: "AI Synthesis",
+    icon: "fact_check",
+    title: "Organised Reports",
     description:
-      "Multi-model pipeline stabilises jargon and aggregates clinical findings.",
+      "Your notes, tidied into a standard record. Nothing added, nothing lost.",
     delay: 300,
   },
   {
     icon: "picture_as_pdf",
     title: "PDF Reports",
     description:
-      "Download clinician-ready summaries and medical charts instantly.",
+      "Download signed field reports, ready to print or share.",
     delay: 400,
   },
 ];
-
-/** Animated waveform spectrum bars next to the eyebrow pill */
-function SpectrumBars() {
-  const delays = [0.1, 0.3, 0.6, 0.2, 0.5, 0.8, 0.4];
-  return (
-    <span className="flex items-end gap-[2px] h-4" aria-hidden="true">
-      {delays.map((d, i) => (
-        <span
-          key={i}
-          className="ds-wave-bar"
-          style={{
-            height: "100%",
-            animationDelay: `${d}s`,
-            animationDuration: `${1.1 + (i % 3) * 0.2}s`,
-          }}
-        />
-      ))}
-    </span>
-  );
-}
 
 export default function HeroSection() {
   return (
@@ -105,7 +85,7 @@ export default function HeroSection() {
               DaktariScribe
             </div>
             <div className="text-[9px] text-white/55 tracking-[0.24em] uppercase mt-0.5">
-              Voice-First Clinical Intelligence
+              Field notes to finished reports
             </div>
           </div>
         </div>
@@ -119,8 +99,7 @@ export default function HeroSection() {
             <span className="material-symbols-outlined text-[13px] text-[#4dd9c0]">
               clinical_notes
             </span>
-            Frontline Health AI
-            <SpectrumBars />
+            For frontline health teams
           </span>
         </div>
 
@@ -129,11 +108,8 @@ export default function HeroSection() {
           className="font-black text-white leading-[1.15] drop-shadow-md tracking-tight text-2xl sm:text-3xl xl:text-4xl ds-fade-up"
           style={{ animationDelay: "160ms" }}
         >
-          AI-Powered Voice &amp; Text{" "}
-          <span className="name-gradient">Medical Scribe</span>
-          <br />
-          for Frontline Healthcare Workers and Field Medics
-          <span className="text-[#4dd9c0]">.</span>
+          Voice and text field notes, turned into{" "}
+          <span className="text-[#4dd9c0]">clear clinical reports.</span>
         </h1>
 
         {/* Tagline */}
@@ -141,7 +117,7 @@ export default function HeroSection() {
           className="text-white/72 text-[15px] leading-relaxed max-w-md -mt-1 ds-fade-up"
           style={{ animationDelay: "220ms" }}
         >
-          Capture, synthesise, and report clinical encounters in the field with minimal internet connectivity, at the speed of care.
+          Capture, organise and report clinical encounters in the field, even with weak internet.
         </p>
 
         {/* 2 × 2 Feature Bento Grid — 1-col on very small screens, 2-col on sm+ */}
@@ -157,9 +133,9 @@ export default function HeroSection() {
           style={{ animationDelay: "500ms" }}
         >
           {[
-            { icon: "lock", label: "Encrypted" },
-            { icon: "wifi_off", label: "Offline-Ready" },
-            { icon: "verified", label: "Clinician-Vetted" },
+            { icon: "lock", label: "Encryption" },
+            { icon: "wifi_off", label: "Offline capture" },
+            { icon: "verified", label: "Clinician sign-off" },
           ].map(({ icon, label }) => (
             <span
               key={label}
@@ -169,6 +145,9 @@ export default function HeroSection() {
                 {icon}
               </span>
               {label}
+              <span className="normal-case tracking-normal font-medium text-white/80">
+                · Coming soon
+              </span>
             </span>
           ))}
         </div>

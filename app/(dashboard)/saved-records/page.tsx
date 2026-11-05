@@ -7,7 +7,7 @@ export default function SavedRecordsPage() {
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h2 className="font-display-lg text-[32px] text-primary mb-2">Saved Records</h2>
-                    <p className="font-body-lg text-body-lg text-on-surface-variant">Manage and review historical clinical intelligence data.</p>
+                    <p className="font-body-lg text-body-lg text-on-surface-variant">Manage and review past encounter records.</p>
                 </div>
             </div>
             

@@ -85,7 +85,7 @@ export default function LegalPageLayout({
             {title}
           </h1>
           <p className="text-white/55 text-[12px] tracking-widest uppercase font-medium">
-            DaktariScribe Pharma Network &nbsp;&middot;&nbsp; Last updated: {lastUpdated}
+            DaktariScribe &nbsp;&middot;&nbsp; Last updated: {lastUpdated}
           </p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function LegalPageLayout({
       {/* ── Footer ── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-10 sm:pb-12 text-center">
         <p className="text-[10px] uppercase tracking-widest text-[#8fafc0]">
-          &copy; 2026 DaktariScribe Clinical Pharma Network. All rights reserved.
+          &copy; 2026 DaktariScribe. All rights reserved.
         </p>
       </div>
     </div>

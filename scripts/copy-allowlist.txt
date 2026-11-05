@@ -1,0 +1,5 @@
+# Phrases allowed in user-facing copy even though they contain a banned word (spec §1.5).
+# One phrase per line, case-insensitive. Keep this list short and justify each entry.
+
+# Job title used in health facilities
+Clinical Assistant

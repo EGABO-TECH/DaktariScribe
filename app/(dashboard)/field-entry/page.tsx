@@ -64,7 +64,7 @@ export default function FieldEntryPage() {
                 onClick={() => setActiveTab('review')}
                 className="text-xs text-secondary font-bold flex items-center gap-1 hover:underline"
               >
-                Review Synthesized Note &rarr;
+                Review organised draft &rarr;
               </button>
             </div>
 
