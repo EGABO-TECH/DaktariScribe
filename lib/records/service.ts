@@ -14,7 +14,7 @@ import { decryptJson, decryptOptional, decryptString, encryptJson, encryptOption
 import { newId, newRecordId } from '@/lib/ids';
 import { logger } from '@/lib/logger';
 import { templateDefinition, type TemplateDefinition } from '@/lib/templates/definition';
-import { refinedRecord, recordFromTypedText, type RefinedRecord } from './refined-record';
+import { countBlockingFlags, refinedRecord, type RefinedRecord } from './refined-record';
 import { INTERVIEW_LANGUAGE_CODES } from './languages';
 import { canEdit, signOffBlocker } from '@/lib/encounter-status';
 
@@ -99,46 +99,126 @@ async function getTemplate(ctx: AuthContext, id: string) {
   return row ?? null;
 }
 
-// ── Create (Process a typed note) ────────────────────────────────────────────
+/// ── Create (Process) ─────────────────────────────────────────────────────────
 
-export const createTextEncounterInput = z.object({
-  idempotencyKey: z.string().uuid(),
-  templateId: z.string().min(1).max(100),
-  site: z.string().trim().min(1).max(120),
-  encounterDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  respondentRef: z.string().trim().max(80).optional().default(''),
-  consentObtained: z.literal(true, { error: 'Consent is required before a record can be saved.' }),
-  interviewLanguage: z.enum(INTERVIEW_LANGUAGE_CODES),
-  text: z.string().max(100_000).refine((t) => t.trim().length > 0, 'The note is empty.'),
-  deviceCreatedAt: z.string().datetime().optional(),
+export const AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/aac'];
+export const UPLOAD_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+];
+
+const attachmentInput = z.object({
+  kind: z.enum(['audio', 'upload']),
+  mimeType: z.string().max(120),
+  files: z.number().int().min(1).max(48),
+  bytes: z.number().int().min(1).max(500 * 1024 * 1024),
+  name: z.string().max(200).optional(),
 });
-export type CreateTextEncounterInput = z.input<typeof createTextEncounterInput>;
 
-export async function createTextEncounter(
+export const createEncounterInput = z
+  .object({
+    idempotencyKey: z.string().uuid(),
+    templateId: z.string().min(1).max(100),
+    site: z.string().trim().min(1).max(120),
+    encounterDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    respondentRef: z.string().trim().max(80).optional().default(''),
+    consentObtained: z.literal(true, { error: 'Consent is required before a record can be saved.' }),
+    interviewLanguage: z.enum(INTERVIEW_LANGUAGE_CODES),
+    text: z.string().max(100_000).optional().default(''),
+    attachments: z.array(attachmentInput).max(20).optional().default([]),
+    deviceCreatedAt: z.string().datetime().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (!v.text.trim() && v.attachments.length === 0) ctx.addIssue({ code: 'custom', message: 'Add a note, a recording or a file first.', path: ['text'] });
+    for (const a of v.attachments) {
+      const allowed = a.kind === 'audio' ? AUDIO_TYPES.some((t) => a.mimeType.startsWith(t)) : UPLOAD_MIME_TYPES.includes(a.mimeType);
+      if (!allowed) ctx.addIssue({ code: 'custom', message: `This file type is not supported: ${a.mimeType}`, path: ['attachments'] });
+      if (a.kind === 'upload' && (a.files !== 1 || a.bytes > 20 * 1024 * 1024)) ctx.addIssue({ code: 'custom', message: 'Files must be 20 MB or smaller.', path: ['attachments'] });
+    }
+  });
+export type CreateEncounterInput = z.input<typeof createEncounterInput>;
+/** Alias kept for the typed-note path and tests. */
+export const createTextEncounterInput = createEncounterInput;
+
+export type CreatedEncounter = { id: string; created: boolean; status: EncounterStatus; uploads: { sourceId: string; kind: string; files: number }[] };
+
+async function existingByKey(ctx: AuthContext, key: string): Promise<CreatedEncounter | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({ id: encounter.id, status: encounter.status })
+    .from(encounter)
+    .where(and(eq(encounter.orgId, ctx.orgId), eq(encounter.idempotencyKey, key)))
+    .limit(1);
+  if (!row) return null;
+  const srcs = await db
+    .select({ id: source.id, kind: source.kind, files: source.fileCount, status: source.status })
+    .from(source)
+    .where(eq(source.encounterId, row.id));
+  return {
+    id: row.id,
+    created: false,
+    status: row.status,
+    uploads: srcs.filter((s) => s.status === 'pending_upload').map((s) => ({ sourceId: s.id, kind: s.kind, files: s.files })),
+  };
+}
+
+export async function createEncounter(
   ctx: AuthContext,
   workerName: string,
-  input: z.output<typeof createTextEncounterInput>,
-): Promise<{ id: string; created: boolean }> {
+  input: z.output<typeof createEncounterInput>,
+): Promise<CreatedEncounter> {
   const db = getDb();
-
-  const existing = await db
-    .select({ id: encounter.id })
-    .from(encounter)
-    .where(and(eq(encounter.orgId, ctx.orgId), eq(encounter.idempotencyKey, input.idempotencyKey)))
-    .limit(1);
-  if (existing[0]) return { id: existing[0].id, created: false };
+  const existing = await existingByKey(ctx, input.idempotencyKey);
+  if (existing) return existing;
 
   const tpl = await getTemplate(ctx, input.templateId);
   if (!tpl) throw new NotFoundError();
-  const def = templateDefinition.parse(tpl.definition);
+
+  // Billing gate (no-op unless payments are configured). Checked before anything is created.
+  const { billingEnforced, getActivePass, consumeReport } = await import('@/lib/billing/entitlements');
+  if (billingEnforced()) {
+    const { assertCanProcess } = await import('@/lib/billing/rules');
+    assertCanProcess(await getActivePass(ctx.userId, ctx.orgId), { voiceSeconds: input.attachments.some((a) => a.kind === 'audio') ? 1 : 0 });
+  }
 
   await ensureWorkspace(ctx);
 
   const id = newRecordId(input.encounterDate);
-  const sourceId = newId();
-  const versionId = newId();
-  // The original is stored exactly as typed; trimming happens only in the derived version.
-  const content = recordFromTypedText(sourceId, input.text, def);
+  const sources: (typeof source.$inferInsert)[] = [];
+  if (input.text.trim()) {
+    // The original is stored exactly as typed.
+    sources.push({
+      id: newId(),
+      encounterId: id,
+      kind: 'text',
+      mimeType: 'text/plain',
+      bytes: Buffer.byteLength(input.text, 'utf8'),
+      rawText: encryptString(input.text),
+      language: input.interviewLanguage,
+      engine: 'typed',
+      status: 'ready',
+    });
+  }
+  for (const a of input.attachments) {
+    const sid = newId();
+    sources.push({
+      id: sid,
+      encounterId: id,
+      kind: a.kind,
+      mimeType: a.mimeType,
+      bytes: a.bytes,
+      storageKey: `sources/${sid}/`,
+      language: input.interviewLanguage,
+      status: 'pending_upload',
+      fileCount: a.files,
+      meta: a.name ? { fileName: a.name.slice(0, 200) } : null,
+    });
+  }
 
   try {
     await db.batch([
@@ -154,45 +234,93 @@ export async function createTextEncounter(
         respondentRef: encryptOptional(input.respondentRef),
         consentObtained: true,
         interviewLanguage: input.interviewLanguage,
-        // Phase 1 has no automated processing, so the typed note goes straight to review.
-        status: 'in_review',
-        currentVersionId: versionId,
+        status: 'processing',
         deviceCreatedAt: input.deviceCreatedAt ? new Date(input.deviceCreatedAt) : null,
         idempotencyKey: input.idempotencyKey,
       }),
-      db.insert(source).values({
-        id: sourceId,
-        encounterId: id,
-        kind: 'text',
-        mimeType: 'text/plain',
-        bytes: Buffer.byteLength(input.text, 'utf8'),
-        rawText: encryptString(input.text),
-        language: input.interviewLanguage,
-        engine: 'typed',
-        status: 'ready',
-      }),
-      db.insert(refinedVersion).values({
-        id: versionId,
-        encounterId: id,
-        versionNo: 1,
-        createdBy: ctx.userId,
-        content: encryptJson(content),
-      }),
+      ...sources.map((s) => db.insert(source).values(s)),
     ]);
   } catch (err) {
-    // A concurrent retry with the same idempotency key won the race.
-    const again = await db
-      .select({ id: encounter.id })
-      .from(encounter)
-      .where(and(eq(encounter.orgId, ctx.orgId), eq(encounter.idempotencyKey, input.idempotencyKey)))
-      .limit(1);
-    if (again[0]) return { id: again[0].id, created: false };
+    const again = await existingByKey(ctx, input.idempotencyKey);
+    if (again) return again;
     throw err;
   }
 
-  await audit(ctx, 'encounter.create', 'encounter', id, { kind: 'text' });
+  await consumeReport(ctx.userId, ctx.orgId, id).catch((err) => logger.error('billing.consume_failed', { encounterId: id, err }));
+  await audit(ctx, 'encounter.create', 'encounter', id, { sources: sources.length });
   logger.info('encounter.created', { encounterId: id, orgId: ctx.orgId });
-  return { id, created: true };
+
+  const uploads = sources.filter((s) => s.status === 'pending_upload').map((s) => ({ sourceId: s.id!, kind: s.kind, files: s.fileCount ?? 1 }));
+  if (!uploads.length) {
+    const { dispatch } = await import('@/lib/jobs/dispatch');
+    await dispatch({ name: 'encounter/refine.requested', data: { encounterId: id, requestedBy: ctx.userId } });
+  }
+  return { id, created: true, status: 'processing', uploads };
+}
+
+/** Typed-note path. */
+export async function createTextEncounter(ctx: AuthContext, workerName: string, input: z.output<typeof createEncounterInput>) {
+  return createEncounter(ctx, workerName, input);
+}
+
+/** Re-process: runs organising again on the same originals. Free (spec §7.2). */
+export async function reprocessEncounter(ctx: AuthContext, id: string) {
+  const db = getDb();
+  const [enc] = await db.select().from(encounter).where(and(encounterScope(ctx), eq(encounter.id, id))).limit(1);
+  if (!enc) throw new NotFoundError();
+  if (enc.workerId !== ctx.userId) throw new ForbiddenError('Only the author can re-process this record.');
+  if (enc.status === 'final') throw new ConflictError('Signed-off records cannot be re-processed.');
+  const failed = await db
+    .update(source)
+    .set({ status: 'pending', error: null })
+    .where(and(eq(source.encounterId, id), eq(source.status, 'failed')))
+    .returning({ id: source.id, kind: source.kind });
+  await db.update(encounter).set({ status: 'processing' }).where(eq(encounter.id, id));
+  const { dispatch } = await import('@/lib/jobs/dispatch');
+  if (failed.length) {
+    for (const f of failed)
+      await dispatch({ name: f.kind === 'audio' ? 'source/transcribe.requested' : 'source/extract.requested', data: { sourceId: f.id } });
+  } else {
+    await dispatch({ name: 'encounter/refine.requested', data: { encounterId: id, requestedBy: ctx.userId } });
+  }
+  await audit(ctx, 'encounter.reprocess', 'encounter', id);
+}
+
+/** A source the caller may upload to (author of an in-scope encounter). */
+export async function sourceForUpload(ctx: AuthContext, sourceId: string) {
+  const db = getDb();
+  const [row] = await db
+    .select({ source, workerId: encounter.workerId })
+    .from(source)
+    .innerJoin(encounter, eq(encounter.id, source.encounterId))
+    .where(and(eq(source.id, sourceId), encounterScope(ctx)))
+    .limit(1);
+  if (!row || row.workerId !== ctx.userId) throw new NotFoundError();
+  return row.source;
+}
+
+/** A source the caller may read (e.g. audio playback). */
+export async function sourceForRead(ctx: AuthContext, sourceId: string) {
+  const db = getDb();
+  const [row] = await db
+    .select({ source })
+    .from(source)
+    .innerJoin(encounter, eq(encounter.id, source.encounterId))
+    .where(and(eq(source.id, sourceId), encounterScope(ctx)))
+    .limit(1);
+  if (!row) throw new NotFoundError();
+  return row.source;
+}
+
+export async function markUploaded(ctx: AuthContext, sourceId: string): Promise<boolean> {
+  const db = getDb();
+  const res = await db
+    .update(source)
+    .set({ status: 'pending' })
+    .where(and(eq(source.id, sourceId), eq(source.status, 'pending_upload')))
+    .returning({ id: source.id });
+  if (res.length) await audit(ctx, 'source.uploaded', 'source', sourceId);
+  return res.length > 0;
 }
 
 // ── List ─────────────────────────────────────────────────────────────────────
@@ -411,10 +539,28 @@ export async function signOffRecord(
   const db = getDb();
   const detail = await getRecordDetail(ctx, id);
   const isAuthor = detail.workerId === ctx.userId;
-  const blocker = signOffBlocker({ status: detail.status, isAuthor, hasVersion: !!detail.currentVersion, attested });
+  const blockingFlags = detail.currentVersion ? countBlockingFlags(detail.currentVersion.content) : 0;
+  const blocker = signOffBlocker({ status: detail.status, isAuthor, hasVersion: !!detail.currentVersion, attested, blockingFlags });
   if (blocker) throw isAuthor ? new ConflictError(blocker) : new ForbiddenError(blocker);
   if (!detail.currentVersion || detail.currentVersion.id !== versionId)
     throw new ConflictError('This record changed since you opened it. Reload and review it again.');
+
+  // Confirmed metric values (no identifiers) for Insights and slide charts.
+  const metricFields = detail.template.definition.sections.flatMap((s) => s.fields).filter((f) => f.metric);
+  const metrics = detail.currentVersion.content.fields
+    .filter((f) => f.status === 'recorded' && f.value !== null && metricFields.some((m) => m.key === f.key))
+    .map((f) => ({
+      id: newId(),
+      orgId: detail.orgId,
+      encounterId: id,
+      workerId: detail.workerId,
+      templateId: detail.template.id,
+      fieldKey: f.key,
+      numValue: typeof f.value === 'number' ? f.value : null,
+      textValue: typeof f.value === 'number' ? null : String(f.value),
+      site: detail.site,
+      encounterDate: detail.encounterDate,
+    }));
 
   await db.batch([
     db.insert(signoff).values({ id: newId(), versionId, signerId: ctx.userId, signerName, statement: SIGNOFF_STATEMENT }),
@@ -422,6 +568,7 @@ export async function signOffRecord(
       .update(encounter)
       .set({ status: 'final' })
       .where(and(encounterScope(ctx), eq(encounter.id, id), eq(encounter.currentVersionId, versionId))),
+    ...metrics.map((m) => db.insert(schema.metricValue).values(m).onConflictDoNothing()),
   ]);
   await audit(ctx, 'encounter.signoff', 'encounter', id, { versionNo: detail.currentVersion.versionNo });
 }
