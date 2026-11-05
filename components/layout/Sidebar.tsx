@@ -5,12 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
+import { NAV_LINKS, isActive as matchActive } from './nav-links';
+import { draftStore } from '@/lib/offline/db';
 
-const NAV_LINKS = [
-    { href: '/field-entry', icon: 'mic', label: 'Field Entry' },
-    { href: '/saved-records', icon: 'library_books', label: 'Saved Records' },
-    { href: '/reports', icon: 'ios_share', label: 'Reports Generator' },
-];
 
 export default function Sidebar() {
     const { signOut } = useClerk();
@@ -19,12 +16,18 @@ export default function Sidebar() {
     const router = useRouter();
 
     const handleSignOut = async () => {
+        // Drafts on this device belong to this user; remove them before signing out.
+        try {
+            await draftStore.clear();
+        } catch {
+            /* IndexedDB unavailable */
+        }
         await signOut();
         router.push('/');
     };
 
     return (
-        <nav className="hidden lg:flex flex-col h-screen fixed left-0 w-[280px] bg-nav text-on-nav py-stack-lg z-40 transition-all duration-200 ease-in-out border-r border-outline-variant shadow-[4px_0_24px_rgba(0,0,0,0.2)] shrink-0">
+        <nav aria-label="Main" className="hidden lg:flex flex-col h-screen fixed left-0 w-[280px] bg-nav text-on-nav py-stack-lg z-40 transition-all duration-200 ease-in-out border-r border-outline-variant shadow-[4px_0_24px_rgba(0,0,0,0.2)] shrink-0">
             {/* Profile Header */}
             <div className="px-6 pb-6 border-b border-on-nav/10">
                 <div className="flex flex-col items-center gap-2">
@@ -57,8 +60,8 @@ export default function Sidebar() {
             
             {/* Navigation Links */}
             <ul className="flex-1 overflow-y-auto pt-4 px-2 space-y-1">
-                {NAV_LINKS.map(({ href, icon, label }) => {
-                    const isActive = pathname === href;
+                {NAV_LINKS.map(({ href, icon, label, match }) => {
+                    const isActive = matchActive(pathname, match);
                     return (
                         <li key={href} className="relative group">
                             {isActive && (
@@ -71,8 +74,9 @@ export default function Sidebar() {
                                         : 'text-on-nav/70 hover:text-on-nav hover:bg-white/5'
                                 }`}
                                 href={href}
+                                aria-current={isActive ? 'page' : undefined}
                             >
-                                <span className={`material-symbols-outlined ${isActive ? 'icon-fill text-secondary-fixed' : ''}`}>{icon}</span>
+                                <span aria-hidden="true" className={`material-symbols-outlined ${isActive ? 'icon-fill text-secondary-fixed' : ''}`}>{icon}</span>
                                 <span className={`font-body-lg ${isActive ? 'font-semibold' : ''}`}>{label}</span>
                             </Link>
                         </li>
@@ -84,10 +88,10 @@ export default function Sidebar() {
                 <div className="px-2 pb-6">
                     <button
                         onClick={handleSignOut}
-                        className="w-full flex items-center gap-4 px-6 py-4 text-on-nav/60 hover:text-error hover:bg-error/10 rounded-xl transition-all duration-200 group"
+                        className="w-full flex items-center gap-4 px-6 py-4 text-on-nav/80 hover:text-on-nav hover:bg-white/10 rounded-xl transition-all duration-200 group"
                     >
-                        <span className="material-symbols-outlined group-hover:text-error">logout</span>
-                        <span className="font-body-lg font-medium">Logout</span>
+                        <span aria-hidden="true" className="material-symbols-outlined">logout</span>
+                        <span className="font-body-lg font-medium">Sign out</span>
                     </button>
                 </div>
             </div>

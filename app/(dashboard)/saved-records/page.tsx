@@ -1,104 +1,255 @@
 import React from 'react';
+import Link from 'next/link';
+import PageShell from '@/components/layout/PageShell';
+import ServiceNotice from '@/components/layout/ServiceNotice';
+import StatusBadge from '@/components/records/StatusBadge';
+import { isDatabaseConfigured } from '@/db';
+import { canSeeWholeOrg, requireAuth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { listEncounters, listFilterOptions, listFiltersInput, type ListFilters } from '@/lib/records/service';
 
-export default function SavedRecordsPage() {
+export const metadata = { title: 'Saved Records — DaktariScribe' };
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Any status' },
+  { value: 'in_review', label: 'Ready for review' },
+  { value: 'final', label: 'Final' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'draft', label: 'Draft' },
+];
+
+const fieldCls =
+  'w-full min-h-12 rounded-lg border border-outline bg-surface-container-lowest px-3 text-[16px] text-on-surface focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30';
+const labelCls = 'block text-[13px] font-semibold text-on-surface mb-1';
+
+function fmtDate(iso: string) {
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`));
+}
+
+function pageHref(filters: ListFilters, page: number) {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) if (v && k !== 'page') p.set(k, String(v));
+  if (page > 1) p.set('page', String(page));
+  const s = p.toString();
+  return s ? `/saved-records?${s}` : '/saved-records';
+}
+
+export default async function SavedRecordsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const ctx = await requireAuth();
+  const raw = await searchParams;
+  const flat = Object.fromEntries(
+    Object.entries(raw)
+      .map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])
+      .filter(([, v]) => v !== undefined && v !== ''),
+  );
+  const parsed = listFiltersInput.safeParse(flat);
+  const filters: ListFilters = parsed.success ? parsed.data : { page: 1 };
+  const supervisor = canSeeWholeOrg(ctx);
+
+  if (!isDatabaseConfigured()) {
     return (
-        <div className="flex-1 overflow-y-auto p-margin-desktop bg-surface pb-24 lg:pb-margin-desktop">
-            {/* Header Section */}
-            <div className="flex justify-between items-end mb-8">
-                <div>
-                    <h2 className="font-display-lg text-[32px] text-primary mb-2">Saved Records</h2>
-                    <p className="font-body-lg text-body-lg text-on-surface-variant">Manage and review past encounter records.</p>
-                </div>
-            </div>
-            
-            {/* Filters */}
-            <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-end">
-                <div className="flex-1 min-w-[200px]">
-                    <label className="block font-body-sm text-body-sm text-on-surface-variant mb-1">Search Record ID</label>
-                    <div className="relative">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
-                        <input
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md"
-                            placeholder="e.g. DS-2026" type="text" />
-                    </div>
-                </div>
-                <div className="w-48">
-                    <label className="block font-body-sm text-body-sm text-on-surface-variant mb-1">Date Range</label>
-                    <input
-                        className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md"
-                        type="date" />
-                </div>
-                <div className="w-48">
-                    <label className="block font-body-sm text-body-sm text-on-surface-variant mb-1">Outreach Location</label>
-                    <select
-                        className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-md text-body-md appearance-none">
-                        <option>All Camps</option>
-                        <option>Camp Alpha</option>
-                        <option>Camp Beta</option>
-                        <option>Mobile Unit 1</option>
-                    </select>
-                </div>
-
-                <button className="bg-surface-variant text-primary px-4 py-2 rounded-lg font-body-md text-body-md font-medium hover:bg-surface-container-high border border-outline-variant transition-colors h-[42px] flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm">filter_list</span>
-                    More Filters
-                </button>
-            </div>
-            
-            {/* Data Table */}
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[600px]">
-                        <thead>
-                            <tr className="bg-surface-container-low border-b border-outline-variant">
-                                <th className="py-3 px-4 font-headline-sm text-[14px] text-primary font-semibold">Record ID</th>
-                                <th className="py-3 px-4 font-headline-sm text-[14px] text-primary font-semibold">Date/Time</th>
-                                <th className="py-3 px-4 font-headline-sm text-[14px] text-primary font-semibold">Outreach Location</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-outline-variant/50">
-                            {[
-                                { id: "DS-2026-01-08", date: "Aug 01, 09:15 AM", location: "Camp Alpha" },
-                                { id: "DS-2026-02-08", date: "Aug 02, 10:30 AM", location: "Camp Beta" },
-                                { id: "DS-2026-03-08", date: "Aug 03, 11:45 AM", location: "Mobile Unit 1" },
-                                { id: "DS-2026-04-08", date: "Aug 04, 02:10 PM", location: "Camp Alpha" }
-                            ].map((row, idx) => (
-                                <tr key={idx} className="hover:bg-surface-container-lowest/50 transition-colors group">
-                                    <td className="py-4 px-4 font-body-md text-body-md text-primary font-medium">
-                                        <div className="flex items-center gap-2">{row.id}-[Cryptographic Nano ID]</div>
-                                    </td>
-                                    <td className="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
-                                        <div className="flex items-center gap-2">{row.date}</div>
-                                    </td>
-                                    <td className="py-4 px-4 font-body-md text-body-md text-on-surface-variant">
-                                        <div className="flex items-center gap-2">{row.location}</div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {/* Pagination */}
-                <div className="bg-surface-container-lowest border-t border-outline-variant px-4 py-3 flex items-center justify-between flex-wrap gap-4">
-                    <div className="font-body-sm text-body-sm text-on-surface-variant">
-                        Showing <span className="font-medium text-primary">1</span> to <span className="font-medium text-primary">10</span> of <span className="font-medium text-primary">97</span> results
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className="p-1 rounded text-outline hover:text-primary hover:bg-surface-variant transition-colors disabled:opacity-50" disabled>
-                            <span className="material-symbols-outlined">chevron_left</span>
-                        </button>
-                        <button className="w-8 h-8 rounded bg-primary text-on-primary font-body-sm text-body-sm font-medium flex items-center justify-center">1</button>
-                        <button className="w-8 h-8 rounded text-on-surface hover:bg-surface-variant transition-colors font-body-sm text-body-sm font-medium flex items-center justify-center">2</button>
-                        <button className="w-8 h-8 rounded text-on-surface hover:bg-surface-variant transition-colors font-body-sm text-body-sm font-medium flex items-center justify-center">3</button>
-                        <span className="text-outline">...</span>
-                        <button className="w-8 h-8 rounded text-on-surface hover:bg-surface-variant transition-colors font-body-sm text-body-sm font-medium flex items-center justify-center">10</button>
-                        <button className="p-1 rounded text-outline hover:text-primary hover:bg-surface-variant transition-colors">
-                            <span className="material-symbols-outlined">chevron_right</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <PageShell title="Saved Records">
+        <ServiceNotice title="Records service unavailable">Saved records can&apos;t be shown right now. Please try again later.</ServiceNotice>
+      </PageShell>
     );
+  }
+
+  let data: Awaited<ReturnType<typeof listEncounters>>;
+  let options: Awaited<ReturnType<typeof listFilterOptions>>;
+  try {
+    [data, options] = await Promise.all([listEncounters(ctx, filters), listFilterOptions(ctx)]);
+  } catch (err) {
+    logger.error('saved_records.load_failed', { err });
+    return (
+      <PageShell title="Saved Records">
+        <ServiceNotice title="Records could not be loaded">Check your connection and reload the page.</ServiceNotice>
+      </PageShell>
+    );
+  }
+
+  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+  const first = data.total ? (data.page - 1) * data.pageSize + 1 : 0;
+  const last = Math.min(data.page * data.pageSize, data.total);
+  const hasFilters = Boolean(filters.q || filters.from || filters.to || filters.site || filters.status || filters.worker);
+
+  return (
+    <PageShell
+      title="Saved Records"
+      description={supervisor ? 'All encounters recorded in your organisation.' : 'Encounters you have recorded.'}
+    >
+      {/* Filters: a plain GET form, so it works without JavaScript and the URL is shareable */}
+      <form method="get" action="/saved-records" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4" role="search" aria-label="Filter records">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="lg:col-span-2">
+            <label htmlFor="q" className={labelCls}>
+              Record ID
+            </label>
+            <input id="q" name="q" defaultValue={filters.q} placeholder="e.g. DS-2026-05" className={fieldCls} autoComplete="off" />
+          </div>
+          <div>
+            <label htmlFor="from" className={labelCls}>
+              From
+            </label>
+            <input id="from" name="from" type="date" defaultValue={filters.from} className={fieldCls} />
+          </div>
+          <div>
+            <label htmlFor="to" className={labelCls}>
+              To
+            </label>
+            <input id="to" name="to" type="date" defaultValue={filters.to} className={fieldCls} />
+          </div>
+          <div>
+            <label htmlFor="site" className={labelCls}>
+              Site
+            </label>
+            <select id="site" name="site" defaultValue={filters.site ?? ''} className={fieldCls}>
+              <option value="">All sites</option>
+              {options.sites.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="status" className={labelCls}>
+              Status
+            </label>
+            <select id="status" name="status" defaultValue={filters.status ?? ''} className={fieldCls}>
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {supervisor && (
+            <div className="lg:col-span-2">
+              <label htmlFor="worker" className={labelCls}>
+                Worker
+              </label>
+              <select id="worker" name="worker" defaultValue={filters.worker ?? ''} className={fieldCls}>
+                <option value="">All workers</option>
+                {options.workers.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="submit" className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-5 font-semibold text-on-primary hover:bg-primary/90">
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
+              filter_list
+            </span>
+            Apply filters
+          </button>
+          {hasFilters && (
+            <Link href="/saved-records" className="inline-flex min-h-12 items-center rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10">
+              Clear
+            </Link>
+          )}
+        </div>
+      </form>
+
+      <section aria-label="Records" className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
+        {data.rows.length === 0 ? (
+          <div className="p-8 text-center">
+            <span className="material-symbols-outlined text-[32px] text-on-surface-variant" aria-hidden="true">
+              folder_open
+            </span>
+            <p className="mt-2 font-semibold text-on-surface">{hasFilters ? 'No records match these filters.' : 'No records yet.'}</p>
+            {!hasFilters && (
+              <Link href="/field-entry" className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-lg bg-secondary px-5 font-semibold text-on-secondary">
+                Capture an encounter
+              </Link>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Table on larger screens */}
+            <table className="hidden w-full border-collapse text-left md:table">
+              <thead className="bg-surface-container-low">
+                <tr className="border-b border-outline-variant text-[13px] text-on-surface">
+                  <th scope="col" className="px-4 py-3 font-semibold">Record ID</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Date</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Site</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Template</th>
+                  {supervisor && <th scope="col" className="px-4 py-3 font-semibold">Worker</th>}
+                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {data.rows.map((r) => (
+                  <tr key={r.id} className="hover:bg-surface-container-low">
+                    <td className="px-4 py-3">
+                      <Link href={`/records/${r.id}`} className="font-label-status text-[13px] font-semibold text-primary underline-offset-2 hover:underline">
+                        {r.id}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-body-md text-on-surface">{fmtDate(r.encounterDate)}</td>
+                    <td className="px-4 py-3 text-body-md text-on-surface">{r.site}</td>
+                    <td className="px-4 py-3 text-body-md text-on-surface-variant">{r.templateName}</td>
+                    {supervisor && <td className="px-4 py-3 text-body-md text-on-surface">{r.workerName}</td>}
+                    <td className="px-4 py-3">
+                      <StatusBadge status={r.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Cards on phones */}
+            <ul className="divide-y divide-outline-variant md:hidden">
+              {data.rows.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/records/${r.id}`} className="block p-4 hover:bg-surface-container-low">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-label-status text-[13px] font-semibold text-primary break-all">{r.id}</span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <p className="mt-1 text-body-md text-on-surface">
+                      {r.site} · {fmtDate(r.encounterDate)}
+                    </p>
+                    <p className="text-[13px] text-on-surface-variant">
+                      {r.templateName}
+                      {supervisor ? ` · ${r.workerName}` : ''}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {data.total > 0 && (
+          <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant px-4 py-3">
+            <p className="text-body-md text-on-surface-variant">
+              Showing <strong className="text-on-surface">{first}</strong>–<strong className="text-on-surface">{last}</strong> of{' '}
+              <strong className="text-on-surface">{data.total}</strong>
+            </p>
+            <div className="flex items-center gap-2">
+              {data.page > 1 ? (
+                <Link href={pageHref(filters, data.page - 1)} className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-primary hover:bg-surface-container-high" rel="prev">
+                  <span className="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                  Previous
+                </Link>
+              ) : null}
+              <span className="px-2 text-body-md text-on-surface-variant">
+                Page {data.page} of {totalPages}
+              </span>
+              {data.page < totalPages ? (
+                <Link href={pageHref(filters, data.page + 1)} className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-primary hover:bg-surface-container-high" rel="next">
+                  Next
+                  <span className="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                </Link>
+              ) : null}
+            </div>
+          </nav>
+        )}
+      </section>
+    </PageShell>
+  );
 }
