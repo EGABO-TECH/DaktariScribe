@@ -28,7 +28,16 @@
   --foreground: #0d2240;
 }
 
-@theme inline {
+/* Non-inline so utilities read CSS variables and the dark theme can remap them. */
+@theme {
+  --color-nav: #001d3d;
+  --color-on-nav: #ffffff;
+  --color-flag: #b45309;
+  --color-flag-container: #fef3c7;
+  --color-on-flag-container: #78350f;
+  --color-success: #006b5c;
+  --color-success-container: #d7f5ee;
+  --color-on-success-container: #00382f;
   --color-secondary: #006b5c;
   --color-on-background: #171c1f;
   --color-surface: #f6fafd;
@@ -87,14 +96,14 @@
   --spacing-margin-mobile: 16px;
   --spacing-unit: 4px;
   --spacing-gutter: 16px;
-  --font-headline-sm: 'Hanken Grotesk';
-  --font-body-lg: 'Inter';
-  --font-display-lg: 'Hanken Grotesk';
-  --font-headline-md: 'Hanken Grotesk';
-  --font-body-md: 'Inter';
-  --font-body-sm: 'Inter';
-  --font-display-lg-mobile: 'Hanken Grotesk';
-  --font-label-status: 'JetBrains Mono';
+  --font-headline-sm: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-lg: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-display-lg: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  --font-headline-md: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body-md: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-body-sm: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-display-lg-mobile: var(--font-hanken), 'Hanken Grotesk', system-ui, sans-serif;
+  --font-label-status: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --text-headline-sm: 20px;
   --text-headline-sm--line-height: 28px;
   --text-headline-sm--font-weight: 600;
@@ -122,6 +131,100 @@
   --text-label-status--font-weight: 500;
   --text-label-status--letter-spacing: 0.05em;
   --color-foreground: var(--foreground);
+}
+
+/* ── Dark theme (same token names, remapped) ──────────────── */
+:root[data-theme="dark"] {
+  --color-background: #0f1418;
+  --color-surface: #0f1418;
+  --color-surface-bright: #353a3e;
+  --color-surface-dim: #0f1418;
+  --color-surface-container-lowest: #151b20;
+  --color-surface-container-low: #1a2126;
+  --color-surface-container: #1e252b;
+  --color-surface-container-high: #283036;
+  --color-surface-container-highest: #333b41;
+  --color-surface-variant: #43474f;
+  --color-on-background: #e2e8ec;
+  --color-on-surface: #e2e8ec;
+  --color-on-surface-variant: #c3c9d0;
+  --color-outline: #8d9199;
+  --color-outline-variant: #43474f;
+  --color-primary: #a6c8ff;
+  --color-on-primary: #00315f;
+  --color-primary-container: #204778;
+  --color-on-primary-container: #d5e3ff;
+  --color-secondary: #44ddc1;
+  --color-on-secondary: #00382f;
+  --color-secondary-container: #005145;
+  --color-on-secondary-container: #68fadd;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-flag: #fbbf24;
+  --color-flag-container: #3b2a06;
+  --color-on-flag-container: #fde68a;
+  --color-success: #44ddc1;
+  --color-success-container: #00382f;
+  --color-on-success-container: #b4f5e7;
+  --color-nav: #0a1626;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --color-background: #0f1418;
+  --color-surface: #0f1418;
+  --color-surface-bright: #353a3e;
+  --color-surface-dim: #0f1418;
+  --color-surface-container-lowest: #151b20;
+  --color-surface-container-low: #1a2126;
+  --color-surface-container: #1e252b;
+  --color-surface-container-high: #283036;
+  --color-surface-container-highest: #333b41;
+  --color-surface-variant: #43474f;
+  --color-on-background: #e2e8ec;
+  --color-on-surface: #e2e8ec;
+  --color-on-surface-variant: #c3c9d0;
+  --color-outline: #8d9199;
+  --color-outline-variant: #43474f;
+  --color-primary: #a6c8ff;
+  --color-on-primary: #00315f;
+  --color-primary-container: #204778;
+  --color-on-primary-container: #d5e3ff;
+  --color-secondary: #44ddc1;
+  --color-on-secondary: #00382f;
+  --color-secondary-container: #005145;
+  --color-on-secondary-container: #68fadd;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-flag: #fbbf24;
+  --color-flag-container: #3b2a06;
+  --color-on-flag-container: #fde68a;
+  --color-success: #44ddc1;
+  --color-success-container: #00382f;
+  --color-on-success-container: #b4f5e7;
+  --color-nav: #0a1626;
+  color-scheme: dark;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Focus ring (visible on every interactive element) ────── */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 2px;
 }
 
 /* ── Base Reset ───────────────────────────────────────────── */

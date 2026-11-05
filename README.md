@@ -4,7 +4,7 @@
   <br/>
   <br/>
 
-  <p><strong>Voice-Powered &amp; Text Medical Scribe for Frontline Healthcare Workers</strong></p>
+  <p><strong>Field notes to finished reports, for frontline health teams</strong></p>
 
   <p>
     <img src="https://img.shields.io/badge/Next.js-16.3.3-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
@@ -15,7 +15,7 @@
   </p>
 
   <p>
-    <em>Capture, synthesise, and report clinical encounters in the field, with minimal internet connectivity at the speed of care.</em>
+    <em>Capture, organise and report clinical encounters in the field, even with weak internet.</em>
   </p>
 </div>
 
@@ -29,24 +29,24 @@ Frontline healthcare workers operating in remote camps, mobile clinics, and huma
 - 🌐 **Poor or no internet connectivity** makes cloud-dependent tools unusable in the field.
 - ⏱️ **Documentation burden** takes time away from patient care — workers spend as much time charting as treating.
 - 🗣️ **Medical jargon and voice quality** degrade transcription accuracy in noisy field environments.
-- 📊 **No standardised reporting** makes aggregating clinical intelligence across camps nearly impossible.
+- 📊 **No standardised reporting** makes aggregating findings across camps nearly impossible.
 
-The result: **critical clinical data is lost, delayed, or never recorded**, impacting patient outcomes and organisational health intelligence.
+The result: **critical clinical data is lost, delayed, or never recorded**, impacting patient outcomes and programme reporting.
 
 ---
 
 ## 💡 The Proposed Solution
 
-**DaktariScribe** is a **voice-first clinical intelligence platform** designed specifically for frontline healthcare workers. It bridges the gap between in-field care delivery and structured medical documentation:
+**DaktariScribe** is a **clinical documentation and reporting tool** designed specifically for frontline healthcare workers. It bridges the gap between in-field care delivery and structured medical documentation:
 
 | Capability | Description |
 |---|---|
 | 🎙️ **Voice Dictation** | Healthcare workers dictate clinical encounters hands-free during or after patient interactions |
 | ✍️ **Manual Entry** | Alternatively type notes using a structured manual entry interface |
-| 🤖 **AI Synthesis** | A multi-model AI pipeline stabilises medical jargon, resolves ambiguities, and aggregates clinical findings into structured data |
+| 🗂️ **Organised Reports** | Notes are tidied into a standard record under template headings. Nothing is added; every line links back to the original. The clinician reviews and signs off |
 | 📁 **Modular Records** | Encounters are grouped by camp location and date, with cryptographic Nano IDs for tamper-evident record integrity |
-| 📄 **PDF Report Generation** | Generate clinician-ready, print-formatted field reports downloadable directly from the browser |
-| 🔒 **Encrypted & Offline-Ready** | Data is encrypted at rest with offline-first architecture enabling operation in low-connectivity environments |
+| 📄 **PDF Reports** | Signed records export as branded, print-quality PDF reports |
+| 🔒 **Encryption & offline capture** | *Coming soon* (Phases 4 and 6 of the build spec) |
 
 ---
 
@@ -111,11 +111,11 @@ flowchart TD
         S --> C
     end
 
-    subgraph AI["🤖 AI Pipeline - Planned"]
-        I -->|Raw audio| T["Speech-to-Text\nTranscription"]
-        T --> U["Multi-Model\nNLP Synthesis"]
+    subgraph Processing["⚙️ Processing - Planned"]
+        I -->|Raw audio| T["Automated\nTranscription"]
+        T --> U["Organise notes\nnothing added"]
         J --> U
-        U --> V["Structured Clinical Data\nICD codes, SOAP format"]
+        U --> V["Structured record\nfor clinician review"]
         V --> L
     end
 ```
@@ -189,58 +189,12 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file in the root of the project. See the comments in the file for where to obtain each key:
+Copy `.env.example` to `.env.local` and fill in what you have. Only Clerk, `DATABASE_URL` (Neon) and `DATA_ENCRYPTION_KEY` are needed for Phase 1; the other services are added phase by phase (see `DAKTARISCRIBE_BUILD_SPEC.md` §3.1). **Never commit `.env.local`.**
 
-```env
-# ── Clerk Authentication ──────────────────────────────────────
-# https://clerk.com → Your App → API Keys
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/register
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/field-entry
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/field-entry
-
-# ── Speech-to-Text / Audio Transcription ─────────────────────
-# OpenAI Whisper (recommended): https://platform.openai.com/api-keys
-OPENAI_API_KEY=sk-...
-# Google Cloud STT v2: https://console.cloud.google.com
-GOOGLE_CLOUD_STT_API_KEY=AIza...
-# AssemblyAI (medical vocab + speaker diarization): https://assemblyai.com
-ASSEMBLYAI_API_KEY=...
-
-# ── AI Text Analysis & NLP Synthesis ─────────────────────────
-# Anthropic Claude: https://console.anthropic.com/keys
-ANTHROPIC_API_KEY=sk-ant-...
-# Google Gemini: https://aistudio.google.com/app/apikey
-GOOGLE_GEMINI_API_KEY=AIza...
-# Active provider: "openai" | "anthropic" | "gemini"
-AI_MODEL_PROVIDER=openai
-AI_MODEL_NAME=gpt-4o
-
-# ── OCR – Optical Character Recognition ──────────────────────
-# Google Vision API: https://console.cloud.google.com → Vision API
-GOOGLE_VISION_API_KEY=AIza...
-# Azure AI Vision: https://portal.azure.com → Cognitive Services
-AZURE_VISION_API_KEY=...
-AZURE_VISION_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
-
-# ── PDF Generation ───────────────────────────────────────────
-# Current default: browser window.print() — no key needed
-# PDFShift (server-side): https://pdfshift.io/
-PDFSHIFT_API_KEY=sk_...
-ENABLE_SERVER_SIDE_PDF=false
-
-# ── File Storage (audio uploads & PDFs) ──────────────────────
-# Cloudflare R2: https://dash.cloudflare.com → R2
-CLOUDFLARE_R2_ACCESS_KEY_ID=...
-CLOUDFLARE_R2_SECRET_ACCESS_KEY=...
-CLOUDFLARE_R2_BUCKET_NAME=daktariscribe-audio
-CLOUDFLARE_R2_ENDPOINT=https://...r2.cloudflarestorage.com
-
-# ── App ──────────────────────────────────────────────────────
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NODE_ENV=development
+```bash
+cp .env.example .env.local
+# generate the app encryption key
+openssl rand -base64 32
 ```
 
 ### 4. Run the Development Server
@@ -294,7 +248,7 @@ npm start
 - **Authentication** — All dashboard routes are protected via Clerk middleware; unauthenticated access is blocked server-side
 - **Encrypted Sessions** — Clerk handles session tokens using industry-standard JWT + RS256 signing
 - **Nano ID Record Integrity** — Each clinical record gets a cryptographically random ID to prevent tampering or enumeration
-- **Confidentiality Notice** — All generated reports carry a legal notice: *"Information contained herein is strictly confidential and intended for authorized medical personnel only."*
+- **Confidentiality Notice** — All exported reports carry a legal notice: *"Information contained herein is strictly confidential and intended for authorized medical personnel only."*
 - **Terms & Privacy** — Users must agree to Terms of Service and Privacy Policy during registration
 
 ---
@@ -311,12 +265,12 @@ npm start
 
 ## 📄 License
 
-© 2026 DaktariScribe Clinical Network. All rights reserved.
+© 2026 DaktariScribe. All rights reserved.
 
 ---
 
 <div align="center">
-  <img src="public/assets/DaktariScribe-Logo-Tagline.png" alt="DaktariScribe — Voice-First Clinical Intelligence" width="320" />
+  <img src="public/assets/DaktariScribe-Full-Logo.png" alt="DaktariScribe" width="320" />
   <br/>
   <sub>Built with ❤️ for frontline healthcare workers everywhere.</sub>
 </div>

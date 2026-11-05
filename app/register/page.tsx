@@ -127,7 +127,7 @@ export default function RegisterPage() {
 
             {/* Titles */}
             <h1 className="relative z-10 text-white font-extrabold text-[19px] sm:text-[22px] leading-tight tracking-tight mb-1">
-              DaktariScribe Pharma Network
+              DaktariScribe
             </h1>
             <p className="relative z-10 text-[#a8f0e6] text-[13px] font-medium mb-3">
               System Portal Sign Up Form
@@ -436,7 +436,7 @@ export default function RegisterPage() {
                     >
                       Privacy Policy
                     </Link>
-                    . I understand that AI-generated outputs must be validated by a licensed clinician.
+                    . I understand that I must review and sign off every report before it is final.
                   </span>
                 </label>
               </div>
@@ -500,7 +500,7 @@ export default function RegisterPage() {
 
         {/* Footer note */}
         <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-[#8fafc0]">
-          © 2026 DaktariScribe Clinical Network. All rights reserved.
+          © 2026 DaktariScribe. All rights reserved.
         </p>
       </div>
     </div>

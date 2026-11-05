@@ -281,7 +281,7 @@ export default function LoginSection() {
 
         {/* Footer note */}
         <p className="mt-8 text-center text-[10px] uppercase tracking-widest text-[#8fafc0]">
-          © 2026 DaktariScribe Clinical Network. All rights reserved.
+          © 2026 DaktariScribe. All rights reserved.
         </p>
       </div>
     </section>

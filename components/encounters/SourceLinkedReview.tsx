@@ -52,7 +52,7 @@ export default function SourceLinkedReview({
             Source-Linked Clinical Verification
           </h3>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Click any sentence in the synthesized note to cross-reference with the raw audio transcript.
+            Click any sentence in the organised draft to cross-reference with the raw audio transcript.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export default function SourceLinkedReview({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-red-100 border border-red-300" />
-            Unverified / Hallucination risk
+            Not found in source
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-teal-100 border border-teal-400" />
@@ -144,8 +144,8 @@ export default function SourceLinkedReview({
         <div className="p-6 bg-white flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-secondary">smart_toy</span>
-              Synthesized Clinical Note
+              <span className="material-symbols-outlined text-[16px] text-secondary">description</span>
+              Organised Draft
             </span>
             <span className="text-[11px] text-on-surface-variant/70">
               {sentences.length} sentences
