@@ -489,11 +489,10 @@ body {
 .hero-bg {
   background-color: #0d2240;
   background-image:
-    linear-gradient(135deg, rgba(13, 34, 64, 0.88) 0%, rgba(0, 185, 150, 0.72) 100%),
+    linear-gradient(140deg, rgba(13, 34, 64, 0.94) 0%, rgba(11, 49, 73, 0.88) 55%, rgba(0, 86, 75, 0.84) 100%),
     url('/assets/Hero-section.jpg');
   background-size: cover;
   background-position: center center;
-  background-blend-mode: multiply;
 }
 
 @keyframes ds-fade-up {

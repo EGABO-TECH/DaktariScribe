@@ -126,28 +126,6 @@ export default function HeroSection() {
             <FeatureCard key={feat.icon} {...feat} />
           ))}
         </div>
-
-        {/* Trust badges */}
-        <div
-          className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 ds-fade-up"
-          style={{ animationDelay: "500ms" }}
-        >
-          {[
-            { icon: "lock", label: "Encryption" },
-            { icon: "wifi_off", label: "Offline capture" },
-            { icon: "verified", label: "Clinician sign-off" },
-          ].map(({ icon, label }) => (
-            <span
-              key={label}
-              className="flex items-center gap-1 text-white/60 text-[10.5px] font-semibold tracking-wide uppercase"
-            >
-              <span className="material-symbols-outlined text-[13px] text-[#4dd9c0]">
-                {icon}
-              </span>
-              {label}
-            </span>
-          ))}
-        </div>
       </div>
     </section>
   );
