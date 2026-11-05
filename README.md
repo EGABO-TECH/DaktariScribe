@@ -114,7 +114,7 @@ flowchart TD
         S --> C
     end
 
-    subgraph Processing["⚙️ Processing - Planned"]
+    subgraph Processing["⚙️ Processing"]
         I -->|Raw audio| T["Automated\nTranscription"]
         T --> U["Organise notes\nnothing added"]
         J --> U
@@ -222,27 +222,45 @@ npm start
 
 ---
 
-## 🔑 What works today (Phase 1)
+## 🔑 What it does
 
-- **Field Entry** (`/field-entry`): template, site, date, respondent reference, interview language and a required consent checkbox. The **Type** tab autosaves to the device every 3 s and on blur. **Save draft** keeps it on the device; **Process** creates the record on the server (retries never create duplicates). **Record** and **Upload** are marked *coming soon*.
-- **Saved Records** (`/saved-records`): server-side pagination; filters for record ID, date range, site, status and (supervisors) worker.
-- **Record detail** (`/records/[id]`): the current version, edits saved as new versions, sign-off by the author, the original note exactly as typed, and history.
-- **Reports** (`/reports`): signed-off records grouped by month and day, each with a **PDF** download.
-- **PDF report**: logo, record ID, site, date, author, sections, fields table with *Not recorded* for blanks, sign-off block, provenance line, and the confidentiality notice with page numbers on every page.
+| Area | What works | Needs |
+|---|---|---|
+| **Capture** (`/field-entry`) | Type, record (5-minute segments, level meter) or upload (photos, PDF, Word, Excel, CSV). Everything is saved encrypted on the device first and works offline; "Process" queues it and it uploads when online | — |
+| **Organising** | Notes are tidied into the template. Every line links to the exact original text; code checks block invented numbers, units, dates, medicines and dropped negations | `ANTHROPIC_API_KEY` (without it the original note is used as the draft) |
+| **Transcription** | English: AssemblyAI (Medical Mode, speaker labels, keyterms). Ugandan/African languages: Sunbird AI. Engine fallback, segment stitching, repeat/silence guard | `ASSEMBLYAI_API_KEY`, `SUNBIRD_USERNAME`/`SUNBIRD_PASSWORD` |
+| **Uploads** | DOCX/XLSX/CSV/text PDF parsed on the server; photos and scans read by transcribe-only OCR | OCR needs `ANTHROPIC_API_KEY` |
+| **Review** (`/records/[id]/review`) | Original beside the draft, click a line to see its source and hear the audio, word diff, accept/edit/reject, flags; sign-off blocked while flags remain | — |
+| **Exports** | PDF, Word and slides for one record or a filtered set, in a chosen language; numbers, doses and names are protected during translation | Translation needs Sunbird or `ANTHROPIC_API_KEY` |
+| **Insights** (`/insights`, supervisors) | Charts of confirmed recorded values over time and by site, Build deck | — |
+| **Billing** (`/pricing`, `/billing`) | 7-day trial (one per account and phone), prepaid UGX passes, top-ups, team seats, mobile money and card, idempotent webhooks, receipts, cost ledger (`/admin/costs`) | `NYLONPAY_*` (billing is off until set) |
+| **Audit** (`/admin/audit`) | Views, edits, sign-offs, exports and payments, without patient content | — |
 
-Not built yet: voice recording, uploads, automated organising of notes, offline sync, translation, Word/slide exports and billing. See the build spec for the phase plan.
+### Run it
+
+```bash
+npm install
+cp .env.example .env.local        # fill in Clerk, DATABASE_URL and DATA_ENCRYPTION_KEY first
+npm run db:migrate && npm run db:seed
+npm run dev                       # development
+npm run build && npm start        # production (webpack build, includes the service worker)
+npm test                          # unit tests
+npm run eval:refine               # refinement eval (needs ANTHROPIC_API_KEY); --offline to self-check
+npm run check:copy                # copy check for AI-sounding wording
+```
 
 ---
 
 ## 🛡️ Security & Privacy (current state)
 
-- **Access control**: every query is scoped to the user's organisation; workers see only their own records. Records outside your scope return *not found*.
-- **Field encryption**: respondent references, original notes and record content are encrypted with AES-256-GCM before they are written to the database.
-- **Originals are immutable**: edits create new versions; the typed original is never changed.
-- **Sign-off gate**: only signed-off (Final) records can be exported, enforced on the server from the stored status.
-- **Logs**: the server logger drops note text and other content fields.
-- **Audit log**: record creation, views, edits, sign-off and exports are recorded (without patient content).
-- Not yet: MFA, security headers/CSP, rate limiting, device encryption (Phases 4 and 6).
+- **Access control:** every query is scoped to the organisation; workers see only their own records.
+- **Encryption:** note text, record content, respondent references and stored files are AES-256-GCM encrypted before storage. Offline data is encrypted with a PIN-derived key, locks after 10 minutes and is wiped on sign-out.
+- **Originals are immutable;** edits and organising create new versions; nothing is final without the author's sign-off.
+- **Pseudonymisation** before any text leaves the server; no note content in logs; audit log.
+- **Browser:** strict nonce-based CSP, HSTS, no third-party analytics; the service worker never caches API responses or record pages.
+- **Payments:** signed webhooks, exactly-once activation, server-side prices.
+- **CI:** lint, types, tests, copy check, offline eval, build, `npm audit`, gitleaks, optional ZAP baseline.
+- **Before real patient data:** enable MFA (upgrade Clerk), add Sentry with PII scrubbing, separate preview/production environments, legal review of `/legal/*`, and fluent-speaker review of `messages/fra.json`, `swa.json` (Luganda and Runyankole labels still need translating).
 
 ---
 

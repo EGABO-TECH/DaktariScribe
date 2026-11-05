@@ -145,9 +145,6 @@ export default function HeroSection() {
                 {icon}
               </span>
               {label}
-              <span className="normal-case tracking-normal font-medium text-white/80">
-                · Coming soon
-              </span>
             </span>
           ))}
         </div>
