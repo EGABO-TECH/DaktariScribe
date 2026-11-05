@@ -19,8 +19,20 @@ import {
   date,
   index,
   uniqueIndex,
+  real,
+  customType,
 } from 'drizzle-orm/pg-core';
 import type { TemplateDefinition } from '../lib/templates/definition';
+
+/** bytea that accepts Buffer/Uint8Array or the hex string some drivers return. */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array | string }>({
+  dataType: () => 'bytea',
+  toDriver: (v) => v,
+  fromDriver: (v) => {
+    if (typeof v === 'string') return Buffer.from(v.startsWith('\\x') ? v.slice(2) : v, 'hex');
+    return Buffer.from(v);
+  },
+});
 
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -125,8 +137,14 @@ export const source = pgTable(
     language: text('language'),
     engine: text('engine').$type<SourceEngine>(),
     segments: text('segments'), // 🔒 JSON: [{start,end,speaker?,text,confidence?,page?}]
+    /** pending_upload | pending | processing | ready | failed */
     status: text('status').notNull().default('ready'),
     error: text('error'),
+    /** Number of files (recording segments) stored under storageKey. */
+    fileCount: integer('file_count').notNull().default(0),
+    durationSec: real('duration_sec'),
+    /** Non-identifying processing metadata (engines per segment, removed repeats, page count). */
+    meta: jsonb('meta').$type<Record<string, unknown>>(),
     ...timestamps,
   },
   (t) => [index('source_encounter_idx').on(t.encounterId)],
@@ -230,6 +248,9 @@ export const payment = pgTable(
       .notNull()
       .default('pending'),
     providerTransactionId: text('provider_transaction_id'),
+    providerInvoiceId: text('provider_invoice_id'),
+    invoiceUrl: text('invoice_url'),
+    seats: integer('seats'),
     rawEventIds: jsonb('raw_event_ids').$type<string[]>().notNull().default([]),
     settledAt: timestamp('settled_at', { withTimezone: true }),
     ...timestamps,
@@ -251,6 +272,8 @@ export const pass = pgTable(
     voiceSecondsTotal: integer('voice_seconds_total').notNull(),
     voiceSecondsUsed: integer('voice_seconds_used').notNull().default(0),
     features: jsonb('features').$type<string[]>().notNull().default([]),
+    /** Team passes only: number of covered members. */
+    seats: integer('seats'),
     sourcePaymentId: text('source_payment_id'), // payment id, or 'trial'
     ...timestamps,
   },
@@ -297,3 +320,64 @@ export const auditLog = pgTable(
   },
   (t) => [index('audit_org_created_idx').on(t.orgId, t.createdAt)],
 );
+
+/** Encrypted object store used when Cloudflare R2 is not configured (development / small installs). */
+export const blob = pgTable('blob', {
+  key: text('key').primaryKey(),
+  data: bytea('data').notNull(),
+  bytes: integer('bytes').notNull(),
+  ...timestamps,
+});
+
+/**
+ * Confirmed metric values copied at sign-off (template fields marked metric: true). No names,
+ * notes or respondent references: just the number/choice, the field key, site and date, so
+ * Insights and slide charts can aggregate in SQL while record content stays encrypted.
+ */
+export const metricValue = pgTable(
+  'metric_value',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull(),
+    encounterId: text('encounter_id')
+      .notNull()
+      .references(() => encounter.id),
+    workerId: text('worker_id').notNull(),
+    templateId: text('template_id').notNull(),
+    fieldKey: text('field_key').notNull(),
+    numValue: real('num_value'),
+    textValue: text('text_value'),
+    site: text('site').notNull(),
+    encounterDate: date('encounter_date').notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    index('metric_org_field_date_idx').on(t.orgId, t.fieldKey, t.encounterDate),
+    uniqueIndex('metric_encounter_field_uq').on(t.encounterId, t.fieldKey),
+  ],
+);
+
+/** Processed webhook deliveries (idempotency). */
+export const webhookDelivery = pgTable('webhook_delivery', {
+  id: text('id').primaryKey(), // provider delivery id
+  provider: text('provider').notNull(),
+  event: text('event').notNull(),
+  reference: text('reference'),
+  ...timestamps,
+});
+
+/** Token-bucket rate limiting (spec §6.5) without an extra service. */
+export const rateLimit = pgTable('rate_limit', {
+  key: text('key').primaryKey(),
+  tokens: real('tokens').notNull(),
+  refilledAt: timestamp('refilled_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Per-user billing profile (phone for mobile money, prefilled at checkout). */
+export const billingProfile = pgTable('billing_profile', {
+  userId: text('user_id').primaryKey(),
+  phoneMasked: text('phone_masked'),
+  phone: text('phone'), // 🔒 encrypted
+  email: text('email'),
+  ...timestamps,
+});

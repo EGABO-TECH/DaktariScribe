@@ -12,6 +12,12 @@ export const sourceSpan = z.object({
 export const flag = z.object({
   kind: z.enum(['unclear_audio', 'illegible', 'unknown_abbreviation', 'possible_conflict', 'not_in_source']),
   note: z.string(),
+  /** Set by code verification (never trusted from the model). Blocking flags stop sign-off. */
+  blocking: z.boolean().optional(),
+  /** Which check raised it. */
+  check: z.enum(['spans', 'numbers', 'drugs', 'negation', 'model', 'transcript']).optional(),
+  /** Set when the worker accepts or edits the item in review. */
+  resolved: z.boolean().optional(),
 });
 
 export const refinedLine = z.object({
@@ -25,6 +31,7 @@ export const refinedField = z.object({
   value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
   spans: z.array(sourceSpan),
   status: z.enum(['recorded', 'not_recorded']),
+  flags: z.array(flag).optional(),
 });
 
 export const refinedRecord = z.object({
@@ -37,7 +44,8 @@ export const refinedRecord = z.object({
         code: z.string(),
         label: z.string(),
         forLineIndex: z.number().int(),
-        confirmed: z.literal(false),
+        // false when suggested; true once the clinician confirms the code in review.
+        confirmed: z.boolean(),
       }),
     )
     .optional(),
@@ -49,6 +57,14 @@ export type RefinedLine = z.infer<typeof refinedLine>;
 export type RefinedField = z.infer<typeof refinedField>;
 export type RefinedRecord = z.infer<typeof refinedRecord>;
 
+/** Unresolved blocking flags across lines and fields. Sign-off is disabled while this is > 0. */
+export function countBlockingFlags(rec: RefinedRecord): number {
+  let n = 0;
+  for (const s of rec.sections) for (const l of s.lines) n += (l.flags ?? []).filter((f) => f.blocking && !f.resolved).length;
+  for (const f of rec.fields) n += (f.flags ?? []).filter((x) => x.blocking && !x.resolved).length;
+  return n;
+}
+
 /** Section used for the worker's own notes before any organising (Phase 1 text path). */
 export const NOTES_SECTION_KEY = 'clinical_notes';
 
@@ -57,6 +73,13 @@ export const NOTES_SECTION_KEY = 'clinical_notes';
  * every paragraph becomes one line whose span covers exactly that paragraph in the
  * original text, and every template field starts as "not recorded".
  */
+/** Multi-source version of recordFromTypedText: paragraphs from every source, in order. */
+export function recordFromSources(sources: { id: string; text: string }[], def: TemplateDefinition): RefinedRecord {
+  const base = recordFromTypedText(sources[0]?.id ?? 'none', sources[0]?.text ?? '', def);
+  for (const src of sources.slice(1)) base.sections[0].lines.push(...recordFromTypedText(src.id, src.text, def).sections[0].lines);
+  return base;
+}
+
 export function recordFromTypedText(sourceId: string, rawText: string, def: TemplateDefinition): RefinedRecord {
   const lines: RefinedLine[] = [];
   const re = /[^\n]+(?:\n(?!\s*\n)[^\n]+)*/g; // paragraphs separated by blank lines
