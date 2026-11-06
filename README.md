@@ -208,8 +208,8 @@ npm run db:seed      # inserts the global templates
 
 Roles come from Clerk Organizations. In the [Clerk Dashboard](https://dashboard.clerk.com/):
 
-1. **Enable Organizations** for the application.
-2. **Add a custom role** with the key `org:supervisor`, and include it in the role set offered when inviting members. `org:admin` already exists; any other role, such as `org:member`, acts as a worker.
+1. **Enable Organizations** for the application and choose **Membership optional**. The app relies on personal workspaces and has no screens for Clerk's "Membership required" sign-in steps.
+2. **Add a custom role** with the key `supervisor` (Clerk stores it as `org:supervisor`), and add it to the Primary Role Set so it can be assigned. `org:admin` already exists; any other role, such as `org:member`, acts as a worker. In production, custom roles need Clerk's B2B Authentication add-on.
 3. **Add a webhook endpoint** at `https://<your-domain>/api/webhooks/clerk`, subscribed to `organization.created`, `organization.updated`, `organization.deleted`, `organizationMembership.created`, `organizationMembership.updated` and `organizationMembership.deleted`. Put its signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`.
 
 Roles work without the webhook, because access comes from the session token. The webhook keeps organisation names current and team seat counts correct when members leave.
