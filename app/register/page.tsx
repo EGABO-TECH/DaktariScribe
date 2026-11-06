@@ -20,6 +20,13 @@ const PARAM_TO_FIELD: Record<string, FieldKey> = {
 
 const MIN_PASSWORD = 8;
 
+/** Same wording as the landing hero, so the two pages describe the product identically. */
+const BRAND_POINTS = [
+  { title: "Capture in Field", description: "Dictate audio or type medication findings with minimal internet connectivity." },
+  { title: "Organised Reports", description: "Your notes, tidied into a standard record. Nothing added, nothing lost." },
+  { title: "PDF Reports", description: "Download signed field reports, ready to print or share." },
+];
+
 /** Splits a Clerk error into field-level messages and a general one. */
 function readClerkError(err: unknown, fallback: string) {
   const e = err as ClerkError;
@@ -230,11 +237,47 @@ export default function RegisterPage() {
   const lengthOk = password.length >= MIN_PASSWORD;
 
   return (
-    <div className="force-light min-h-screen bg-[#eef6f5] text-[#0d2240]">
-      <div className="mx-auto flex min-h-screen w-full max-w-[460px] flex-col justify-center px-4 py-8 sm:py-12">
+    <div className="force-light min-h-dvh bg-[#eef6f5] text-[#0d2240] lg:flex">
+      {/* Brand panel: desktop only, stays in view while the form column scrolls on short laptop screens. */}
+      <aside
+        aria-label="About DaktariScribe"
+        className="hero-bg hidden text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-[42%] lg:flex-col lg:justify-center lg:overflow-y-auto lg:px-12 lg:py-10 xl:w-1/2 xl:px-20"
+      >
+        <div className="mx-auto w-full max-w-xl">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1.5">
+              <Image src="/assets/DaktariScribe-Favicon.png" alt="" width={40} height={40} className="object-contain" />
+            </span>
+            <span>
+              <span className="block text-[16px] font-black uppercase leading-none tracking-[0.22em]">DaktariScribe</span>
+              <span className="mt-1 block text-[10px] uppercase tracking-[0.2em] text-white/70">Field notes to finished reports</span>
+            </span>
+          </div>
+          <p className="mt-8 font-display-lg text-3xl font-black leading-[1.15] tracking-tight xl:text-4xl">
+            Voice and text field notes, turned into <span className="text-[#4dd9c0]">clear clinical reports.</span>
+          </p>
+          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80">
+            Capture, organise and report clinical encounters in the field, even with weak internet.
+          </p>
+          <ul className="mt-8 flex flex-col gap-5">
+            {BRAND_POINTS.map((point) => (
+              <li key={point.title} className="flex items-start gap-3">
+                <CheckIcon size={20} className="mt-0.5 shrink-0 text-[#4dd9c0]" />
+                <span>
+                  <span className="block text-[15px] font-semibold">{point.title}</span>
+                  <span className="mt-0.5 block text-[14px] leading-relaxed text-white/75">{point.description}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col items-center px-4 pb-6 pt-8 sm:px-8 sm:pt-12 lg:pt-8">
+        <div className="my-auto w-full max-w-[460px] sm:max-w-[600px] lg:max-w-[560px]">
         <main id="main" className="overflow-hidden rounded-2xl border border-[#d0e8e4] bg-white shadow-2xl shadow-[rgba(0,185,150,0.10)]">
           <div
-            className="relative flex flex-col items-center overflow-hidden px-6 pb-7 pt-8 text-center sm:px-8"
+            className="relative flex flex-col items-center overflow-hidden px-6 pb-7 pt-8 text-center sm:px-10 lg:pb-6 lg:pt-6"
             style={{ background: "linear-gradient(145deg, #0d2240 0%, #1a3a5c 60%, #00956e 100%)" }}
           >
             <div
@@ -245,14 +288,14 @@ export default function RegisterPage() {
             <Link
               href="/"
               aria-label="DaktariScribe home"
-              className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-3 shadow-lg transition-transform hover:scale-[1.03]"
+              className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-3 shadow-lg transition-transform hover:scale-[1.03] lg:mb-4 lg:h-16 lg:w-16 lg:p-2"
             >
               <Image src="/assets/DaktariScribe-Favicon.png" alt="DaktariScribe" width={56} height={56} className="object-contain" priority />
             </Link>
-            <h1 className="relative font-display-lg text-[26px] font-bold leading-tight tracking-tight text-white">
+            <h1 className="relative font-display-lg text-[26px] font-bold leading-tight tracking-tight text-white sm:text-[30px]">
               {step === "details" ? "Create your account" : "Check your email"}
             </h1>
-            <p className="relative mt-1.5 text-[15px] text-[#a8f0e6]">
+            <p className="relative mt-1.5 max-w-full text-[15px] text-[#a8f0e6] [overflow-wrap:anywhere]">
               {step === "details" ? (
                 "For clinicians and field health workers."
               ) : (
@@ -262,7 +305,7 @@ export default function RegisterPage() {
               )}
             </p>
           </div>
-          <div className="p-6 sm:p-8">
+          <div className="p-6 sm:p-10 lg:p-8">
           {general && (
             <div role="alert" className="mb-5 flex items-start gap-2 rounded-lg border border-error/40 bg-error-container px-3.5 py-3 text-[14px] text-on-error-container">
               <AlertIcon size={18} className="mt-px shrink-0" />
@@ -330,6 +373,7 @@ export default function RegisterPage() {
                   />
                 </Field>
 
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   id={id("password")}
                   label="Password"
@@ -372,6 +416,7 @@ export default function RegisterPage() {
                     autoComplete="new-password"
                   />
                 </Field>
+                </div>
 
                 <div>
                   <label htmlFor={id("terms")} className="flex cursor-pointer items-start gap-3 py-1">
@@ -486,7 +531,8 @@ export default function RegisterPage() {
             </Link>
           </p>
         )}
-        <p className="mt-auto pt-10 text-center text-[12px] uppercase tracking-widest text-[#8fafc0]">© 2026 DaktariScribe</p>
+        </div>
+        <p className="pt-8 text-center text-[12px] uppercase tracking-widest text-[#8fafc0]">© 2026 DaktariScribe</p>
       </div>
     </div>
   );
