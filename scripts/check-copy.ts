@@ -158,7 +158,7 @@ if (isMain) {
   if (hits.length) {
     console.error(`check-copy: ${hits.length} banned term(s) in user-facing copy (spec §1.5):\n`);
     for (const h of hits) console.error(`  ${h.file}${h.line ? `:${h.line}` : ''}  [${h.match}]  ${h.text}`);
-    console.error('\nRephrase (see DESIGN.md §7) or, for a legitimate use, add the phrase to scripts/copy-allowlist.txt.');
+    console.error('\nRephrase (see specs/DESIGN.md §7) or, for a legitimate use, add the phrase to scripts/copy-allowlist.txt.');
     process.exit(1);
   }
   console.log('check-copy: OK');

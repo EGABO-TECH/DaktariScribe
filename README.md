@@ -159,8 +159,7 @@ DaktariScribe/
 │   └── encounter-status.ts       # Export and sign-off gates
 ├── scripts/check-copy.ts         # CI check for banned "AI-looking" copy (spec §1.5)
 ├── proxy.ts                      # Clerk route protection (Next.js 16 "proxy", formerly middleware)
-├── PRODUCT.md / DESIGN.md        # Product context and design system
-└── DAKTARISCRIBE_BUILD_SPEC.md   # The phased build plan
+└── specs/                        # Product context, design system, build plan and project docs
 ```
 
 ---
@@ -190,7 +189,7 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in what you have. Only Clerk, `DATABASE_URL` (Neon) and `DATA_ENCRYPTION_KEY` are needed for Phase 1; the other services are added phase by phase (see `DAKTARISCRIBE_BUILD_SPEC.md` §3.1). **Never commit `.env.local`.**
+Copy `.env.example` to `.env.local` and fill in what you have. Only Clerk, `DATABASE_URL` (Neon) and `DATA_ENCRYPTION_KEY` are needed for Phase 1; the other services are added phase by phase (see `specs/DAKTARISCRIBE_BUILD_SPEC.md` §3.1). **Never commit `.env.local`.**
 
 ```bash
 cp .env.example .env.local

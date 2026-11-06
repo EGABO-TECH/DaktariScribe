@@ -22,7 +22,7 @@ You are the executing agent. This document is a **spec plus a task list**.
 | `[CLAIMED]` | The product's own legal/marketing pages say it. It may or may not be implemented. |
 | `[VERIFY]` | A likely problem inferred from the stack and the product type. **Confirm in the code before changing anything.** |
 
-The authenticated screens (dashboard, recorder, encounter editor, PDF export) were not visible to the author of this document, and the repo could not be read. So **Phase 0 is mandatory**: audit the real code, then confirm or discard every `[VERIFY]` item. If something here contradicts the code, the code wins. Record the discrepancy in `docs/AUDIT_FINDINGS.md`.
+The authenticated screens (dashboard, recorder, encounter editor, PDF export) were not visible to the author of this document, and the repo could not be read. So **Phase 0 is mandatory**: audit the real code, then confirm or discard every `[VERIFY]` item. If something here contradicts the code, the code wins. Record the discrepancy in `specs/AUDIT_FINDINGS.md`.
 
 **Working rules for the agent**
 
@@ -30,7 +30,7 @@ The authenticated screens (dashboard, recorder, encounter editor, PDF export) we
 2. One task = one commit. Message format: `type(scope): summary [TASK-ID]`.
 3. After each task, run lint, typecheck, tests and a production build. Do not move on if red.
 4. Never log, commit or hard-code PHI, API keys or secrets. Use environment variables. Add a `.env.example`.
-5. If a task needs a product decision, write the question in `docs/OPEN_QUESTIONS.md` and continue with the safest default.
+5. If a task needs a product decision, write the question in `specs/OPEN_QUESTIONS.md` and continue with the safest default.
 6. Prefer small, reversible changes. Add a feature flag for anything risky.
 
 ---
@@ -126,15 +126,15 @@ Do the phases in order. Within a phase, follow the task order.
 
 **Goal:** turn every `[VERIFY]` into `CONFIRMED` / `NOT AN ISSUE`, and map the real architecture.
 
-- **TASK-0.1 — Map the repo.** Produce `docs/ARCHITECTURE.md`: framework + version, routing (App vs Pages router), auth provider, database/storage, AI provider SDKs, PDF library, speech-to-text path, state management, PWA/service-worker status, environment variables (names only), deployment config (`vercel.json`, headers).
-- **TASK-0.2 — Trace the encounter lifecycle.** Document, as a sequence: sign-in → create encounter (title, camp) → capture (voice/text) → storage → transcription → AI synthesis (each model's role and prompt) → edit/review → PDF → download/share → delete. Draw it as a Mermaid diagram in `docs/WORKFLOW.md`.
-- **TASK-0.3 — Run the toolchain.** Install, lint, typecheck, test, build. Record failures and warnings in `docs/AUDIT_FINDINGS.md`.
+- **TASK-0.1 — Map the repo.** Produce `specs/ARCHITECTURE.md`: framework + version, routing (App vs Pages router), auth provider, database/storage, AI provider SDKs, PDF library, speech-to-text path, state management, PWA/service-worker status, environment variables (names only), deployment config (`vercel.json`, headers).
+- **TASK-0.2 — Trace the encounter lifecycle.** Document, as a sequence: sign-in → create encounter (title, camp) → capture (voice/text) → storage → transcription → AI synthesis (each model's role and prompt) → edit/review → PDF → download/share → delete. Draw it as a Mermaid diagram in `specs/WORKFLOW.md`.
+- **TASK-0.3 — Run the toolchain.** Install, lint, typecheck, test, build. Record failures and warnings in `specs/AUDIT_FINDINGS.md`.
 - **TASK-0.4 — Security scan.** Search the code and git history for committed secrets; run `npm audit`; review auth/session handling, API route protection, and database access rules (RLS/security rules). List each F-11, F-15, F-16, F-17 as confirmed/not.
 - **TASK-0.5 — Offline check.** Inspect for service worker, manifest, IndexedDB usage, background sync. Test in DevTools (Offline + Slow 3G) and record what breaks (F-18–F-21).
 - **TASK-0.6 — Lighthouse + a11y.** Run Lighthouse (mobile) on `/`, `/register`, and the main authenticated screens; run axe. Save scores.
 - **TASK-0.7 — Findings reconciliation.** Update this file's finding table: mark each ID `CONFIRMED`, `NOT AN ISSUE`, or `NEW`. Add any new faults discovered.
 
-**Exit criteria:** `docs/ARCHITECTURE.md`, `docs/WORKFLOW.md`, `docs/AUDIT_FINDINGS.md` committed; no source changes yet.
+**Exit criteria:** `specs/ARCHITECTURE.md`, `specs/WORKFLOW.md`, `specs/AUDIT_FINDINGS.md` committed; no source changes yet.
 
 ---
 
