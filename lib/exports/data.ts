@@ -9,6 +9,7 @@ import { and, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb, schema } from '@/db';
 import { canSeeWholeOrg, type AuthContext } from '@/lib/auth';
+import { workspaceName } from '@/lib/organisations';
 import { decryptJson, encryptJson } from '@/lib/crypto';
 import { newId } from '@/lib/ids';
 import { labelsFor, formatDate } from '@/lib/i18n/labels';
@@ -183,7 +184,7 @@ export async function buildExportDoc(
   return {
     lang: opts.lang,
     labels: labelsFor(opts.lang),
-    orgName: ctx.orgName ?? 'Personal workspace',
+    orgName: await workspaceName(ctx.orgId),
     exportedAt: new Date(),
     watermark: opts.watermark,
     aggregate,

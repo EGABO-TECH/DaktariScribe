@@ -13,12 +13,13 @@ import { canSeeWholeOrg, type AuthContext } from '@/lib/auth';
 import { decryptJson, decryptOptional, decryptString, encryptJson, encryptOptional, encryptString } from '@/lib/crypto';
 import { newId, newRecordId } from '@/lib/ids';
 import { logger } from '@/lib/logger';
+import { workspaceName } from '@/lib/organisations';
 import { templateDefinition, type TemplateDefinition } from '@/lib/templates/definition';
 import { countBlockingFlags, refinedRecord, type RefinedRecord } from './refined-record';
 import { INTERVIEW_LANGUAGE_CODES } from './languages';
 import { canEdit, signOffBlocker } from '@/lib/encounter-status';
 
-const { encounter, source, refinedVersion, signoff, template, organisation, membership, auditLog } = schema;
+const { encounter, source, refinedVersion, signoff, template, membership, auditLog } = schema;
 
 export class NotFoundError extends Error {
   status = 404 as const;
@@ -64,17 +65,11 @@ async function audit(ctx: AuthContext, action: string, entityType: string, entit
 
 /** Creates the organisation and membership rows the first time a user writes. */
 async function ensureWorkspace(ctx: AuthContext) {
-  const db = getDb();
-  await db.batch([
-    db
-      .insert(organisation)
-      .values({ id: ctx.orgId, name: ctx.orgName ?? 'Personal workspace' })
-      .onConflictDoNothing(),
-    db
-      .insert(membership)
-      .values({ id: newId(), orgId: ctx.orgId, clerkUserId: ctx.userId, role: ctx.role })
-      .onConflictDoUpdate({ target: [membership.orgId, membership.clerkUserId], set: { role: ctx.role } }),
-  ]);
+  await workspaceName(ctx.orgId);
+  await getDb()
+    .insert(membership)
+    .values({ id: newId(), orgId: ctx.orgId, clerkUserId: ctx.userId, role: ctx.role })
+    .onConflictDoUpdate({ target: [membership.orgId, membership.clerkUserId], set: { role: ctx.role, status: 'active' } });
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────

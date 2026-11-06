@@ -5,7 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
-import { NAV_LINKS, isActive as matchActive } from './nav-links';
+import { ADMIN_LINKS, NAV_LINKS, isActive as matchActive, visibleLinks } from './nav-links';
+import { useWorkspaceAccess } from './use-workspace-access';
 import { wipeDevice } from '@/lib/offline/db';
 import { lock } from '@/lib/offline/crypto';
 import { pendingCount } from '@/lib/offline/outbox';
@@ -16,6 +17,8 @@ export default function Sidebar() {
     const { user, isLoaded } = useUser();
     const pathname = usePathname();
     const router = useRouter();
+    const access = useWorkspaceAccess();
+    const links = [...visibleLinks(NAV_LINKS, access), ...visibleLinks(ADMIN_LINKS, access)];
 
     const handleSignOut = async () => {
         // Logging out wipes everything stored on this device (spec Phase 4.3).
@@ -65,7 +68,7 @@ export default function Sidebar() {
             
             {/* Navigation Links */}
             <ul className="flex-1 overflow-y-auto pt-4 px-2 space-y-1">
-                {NAV_LINKS.map(({ href, icon, label, match }) => {
+                {links.map(({ href, icon, label, match }) => {
                     const isActive = matchActive(pathname, match);
                     return (
                         <li key={href} className="relative group">

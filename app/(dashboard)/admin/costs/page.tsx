@@ -2,6 +2,7 @@ import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
+import { canViewCosts } from '@/lib/roles';
 import { logger } from '@/lib/logger';
 import { costReport } from '@/lib/billing/costs';
 import { formatUgx } from '@/lib/billing/plans';
@@ -10,8 +11,7 @@ export const metadata = { title: 'Costs — DaktariScribe' };
 
 export default async function CostsPage() {
   const ctx = await requireAuth();
-  const personal = ctx.orgId.startsWith('personal_');
-  if (ctx.role !== 'admin' && !personal) {
+  if (!canViewCosts(ctx)) {
     return (
       <PageShell title="Costs">
         <ServiceNotice title="Admins only">This page is available to organisation admins.</ServiceNotice>

@@ -2,7 +2,8 @@ import { desc, eq } from 'drizzle-orm';
 import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import { getDb, isDatabaseConfigured, schema } from '@/db';
-import { canSeeWholeOrg, requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
+import { canViewAudit } from '@/lib/roles';
 
 export const metadata = { title: 'Audit log — DaktariScribe' };
 
@@ -22,7 +23,7 @@ const ACTIONS: Record<string, string> = {
 /** Audit log (spec §6.7): supervisors and admins. Entries never contain patient content. */
 export default async function AuditPage() {
   const ctx = await requireAuth();
-  if (!canSeeWholeOrg(ctx) && !ctx.orgId.startsWith('personal_')) {
+  if (!canViewAudit(ctx)) {
     return (
       <PageShell title="Audit log">
         <ServiceNotice title="Supervisors and admins only">Ask your organisation admin for access.</ServiceNotice>

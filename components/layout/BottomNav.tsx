@@ -3,13 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_LINKS, isActive } from './nav-links';
+import { NAV_LINKS, isActive, visibleLinks } from './nav-links';
+import { useWorkspaceAccess } from './use-workspace-access';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const links = visibleLinks(NAV_LINKS, useWorkspaceAccess());
   return (
     <nav aria-label="Main" className="fixed bottom-0 z-50 flex h-16 w-full items-stretch justify-around border-t border-outline-variant bg-surface-container-lowest lg:hidden">
-      {NAV_LINKS.map(({ href, icon, short, match }) => {
+      {links.map(({ href, icon, short, match }) => {
         const active = isActive(pathname, match);
         return (
           <Link

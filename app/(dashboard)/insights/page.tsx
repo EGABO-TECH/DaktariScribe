@@ -4,7 +4,8 @@ import ServiceNotice from '@/components/layout/ServiceNotice';
 import InsightsCharts from '@/components/insights/InsightsCharts';
 import ExportPanel from '@/components/exports/ExportPanel';
 import { isDatabaseConfigured } from '@/db';
-import { canSeeWholeOrg, requireAuth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
+import { canViewInsights } from '@/lib/roles';
 import { logger } from '@/lib/logger';
 import { insightSites, insightsFilter, insightsFor, metricOptions, type InsightsData } from '@/lib/insights';
 import { billingEnforced, getActivePass } from '@/lib/billing/entitlements';
@@ -16,7 +17,7 @@ const labelCls = 'mb-1 block text-[13px] font-semibold text-on-surface';
 
 export default async function InsightsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await requireAuth();
-  if (!canSeeWholeOrg(ctx)) {
+  if (!canViewInsights(ctx)) {
     return (
       <PageShell title="Insights">
         <ServiceNotice title="Insights are for supervisors">Ask your organisation admin to give you the supervisor role to see team charts.</ServiceNotice>
