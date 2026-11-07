@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useClerk, useUser } from '@clerk/nextjs';
+import { useClerk } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { ADMIN_LINKS, NAV_LINKS, isActive as matchActive, visibleLinks } from './nav-links';
 import { useWorkspaceAccess } from './use-workspace-access';
@@ -14,7 +14,6 @@ import { pendingCount } from '@/lib/offline/outbox';
 
 export default function Sidebar() {
     const { signOut } = useClerk();
-    const { user, isLoaded } = useUser();
     const pathname = usePathname();
     const router = useRouter();
     const access = useWorkspaceAccess();
@@ -40,24 +39,15 @@ export default function Sidebar() {
             <div className="px-6 pb-6 border-b border-on-nav/10">
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex-shrink-0 bg-white rounded-lg p-1 w-16 h-16 overflow-hidden flex items-center justify-center">
-                        {isLoaded && user?.imageUrl ? (
-                            <Image
-                                src={user.imageUrl}
-                                alt={user.fullName || 'User'}
-                                width={64}
-                                height={64}
-                                unoptimized
-                                className="w-full h-full object-cover rounded-md"
-                            />
-                        ) : (
-                            <Image
-                                src="/assets/DaktariScribe-Favicon.png"
-                                alt="DaktariScribe Logo"
-                                width={52}
-                                height={52}
-                                className="object-contain"
-                            />
-                        )}
+                        {/* Decorative: the name is written out right below. */}
+                        <Image
+                            src="/assets/DaktariScribe-Favicon.png"
+                            alt=""
+                            width={56}
+                            height={56}
+                            priority
+                            className="object-contain"
+                        />
                     </div>
                     <div className="flex flex-col items-center text-center">
                         <span className="font-bold leading-tight tracking-tight text-on-nav font-display-lg text-[32px]">DaktariScribe</span>
