@@ -3,7 +3,7 @@
  * through the real pipeline (pseudonymise → refine → spans → coverage → verification) and
  * reports facts that were ADDED, DROPPED or CHANGED. Exits 1 if any fact was added.
  *
- *   npm run eval:refine            # needs ANTHROPIC_API_KEY (paid, no-training tier)
+ *   npm run eval:refine            # needs a text provider key (see .env.example)
  *   npm run eval:refine -- --offline   # harness self-check: uses the unchanged original
  *
  * Fixtures must be synthetic or fully de-identified. Never commit real patient data.
@@ -71,9 +71,12 @@ async function main() {
     .filter((f) => f.endsWith('.json'))
     .sort()
     .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
-  if (!offline && !process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY is not set. Use --offline to self-check the harness.');
-    process.exit(2);
+  if (!offline) {
+    const { isProcessorConfigured } = await import('../lib/ai/provider');
+    if (!isProcessorConfigured()) {
+      console.error('No text provider key is set (GROQ_API_KEY, GEMINI_API_KEY, …). Use --offline to self-check the harness.');
+      process.exit(2);
+    }
   }
   const results: Result[] = [];
   for (const f of fixtures) {

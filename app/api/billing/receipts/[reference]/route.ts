@@ -9,6 +9,7 @@ import { product, type ProductCode } from '@/lib/billing/plans';
 import { ReceiptPdf } from '@/components/exports/ReceiptPdf';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /** GET /api/billing/receipts/:reference — PDF receipt for a successful payment. */
 export async function GET(_request: Request, ctx: RouteContext<'/api/billing/receipts/[reference]'>) {

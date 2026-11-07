@@ -20,6 +20,10 @@ export default function ProcessingProgress({ recordId, initialStep }: { recordId
 
   useEffect(() => {
     let stop = false;
+    let t: ReturnType<typeof setTimeout>;
+    const started = Date.now();
+    // Check every second while a quick result is likely, then ease off to spare the server.
+    const delay = () => (Date.now() - started < 30_000 ? 1000 : Date.now() - started < 120_000 ? 2500 : 5000);
     const tick = async () => {
       try {
         const res = await fetch(`/api/encounters/${encodeURIComponent(recordId)}/status`);
@@ -35,12 +39,21 @@ export default function ProcessingProgress({ recordId, initialStep }: { recordId
       } catch {
         /* offline: keep waiting */
       }
-      if (!stop) setTimeout(tick, 3000);
+      if (!stop) t = setTimeout(tick, delay());
     };
-    const t = setTimeout(tick, 1500);
+    t = setTimeout(tick, 600);
+    // Coming back to the tab: check straight away instead of waiting for the next tick.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !stop) {
+        clearTimeout(t);
+        void tick();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       stop = true;
       clearTimeout(t);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [recordId, router]);
 

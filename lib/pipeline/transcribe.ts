@@ -23,6 +23,23 @@ import { continueToRefine } from './sources';
 /** Files this small are silence or a failed recorder start; skip them (simple VAD). */
 const MIN_AUDIO_BYTES = 3_000;
 
+/** Recording parts sent to the speech service at once. */
+const TRANSCRIBE_CONCURRENCY = 3;
+
+/** Maps with at most `limit` calls in flight; results keep input order. Rejects on the first failure. */
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 export class NoSpeechEngineError extends Error {
   constructor() {
     super('No speech-to-text service is configured for this language (set ASSEMBLYAI_API_KEY or SUNBIRD_USERNAME/PASSWORD).');
@@ -59,32 +76,40 @@ export async function runTranscription(sourceId: string, opts: { rethrow?: boole
   let skipped = 0;
   const seconds: Record<string, number> = { assemblyai: 0, sunbird: 0 };
 
+  /** Transcribes one recording part with engine fallback; null = silent part, skipped. */
+  const transcribeFile = async (file: number) => {
+    const audio = await readFile(sourceId, file, parts.get(file)?.length ?? 0);
+    if (audio.length < MIN_AUDIO_BYTES) return null;
+    let lastErr: unknown;
+    for (const engine of engines) {
+      try {
+        return { engine: engine.name, result: await engine.transcribe(audio, src.mimeType ?? 'audio/webm', language) };
+      } catch (err) {
+        lastErr = err;
+        logger.warn('transcribe.engine_failed', { sourceId, file, engine: engine.name, trimmed: err instanceof AudioTrimmedError, err });
+      }
+    }
+    throw lastErr ?? new Error('Transcription failed');
+  };
+
   try {
-    for (let file = 0; file < src.fileCount; file++) {
-      const audio = await readFile(sourceId, file, parts.get(file)?.length ?? 0);
-      if (audio.length < MIN_AUDIO_BYTES) {
+    // Parts are transcribed in parallel (a few at a time), then stitched in order with offsets.
+    const results = await mapLimit(
+      Array.from({ length: src.fileCount }, (_, i) => i),
+      TRANSCRIBE_CONCURRENCY,
+      transcribeFile,
+    );
+    results.forEach((r, file) => {
+      if (!r) {
         skipped++;
         enginesUsed.push('skipped');
-        continue;
+        return;
       }
-      let lastErr: unknown;
-      let done = false;
-      for (const engine of engines) {
-        try {
-          const r = await engine.transcribe(audio, src.mimeType ?? 'audio/webm', language);
-          for (const s of r.segments) all.push({ ...s, start: s.start + offset, end: s.end + offset, file, fileOffset: offset });
-          offset += r.durationSec;
-          seconds[engine.name] += r.durationSec;
-          enginesUsed.push(engine.name);
-          done = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-          logger.warn('transcribe.engine_failed', { sourceId, file, engine: engine.name, trimmed: err instanceof AudioTrimmedError, err });
-        }
-      }
-      if (!done) throw lastErr ?? new Error('Transcription failed');
-    }
+      for (const s of r.result.segments) all.push({ ...s, start: s.start + offset, end: s.end + offset, file, fileOffset: offset });
+      offset += r.result.durationSec;
+      seconds[r.engine] += r.result.durationSec;
+      enginesUsed.push(r.engine);
+    });
   } catch (err) {
     if (opts.rethrow) throw err;
     await db.update(schema.source).set({ status: 'failed', error: 'Transcription failed. The recording is kept; try Re-process later.' }).where(eq(schema.source.id, sourceId));

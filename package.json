@@ -13,7 +13,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx --env-file=.env.local db/seed.ts",
     "eval:refine": "tsx scripts/eval-refine.ts",
-    "jobs:retry": "tsx --env-file=.env.local scripts/process-stuck.ts"
+    "jobs:retry": "tsx --env-file=.env.local scripts/process-stuck.ts",
+    "ai:check": "tsx --env-file=.env.local scripts/check-ai.ts",
+    "ai:models": "tsx --env-file=.env.local scripts/list-ai-models.ts",
+    "exports:check": "node -e \"process.env.EXPORT_LIVE='1';require('child_process').execSync('npx vitest run lib/__tests__/exports-live.test.ts',{stdio:'inherit'})\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",

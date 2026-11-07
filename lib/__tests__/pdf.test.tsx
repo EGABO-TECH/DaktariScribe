@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
-import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { RecordPdf } from '@/components/exports/RecordPdf';
 import { recordFromTypedText } from '@/lib/records/refined-record';

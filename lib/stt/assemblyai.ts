@@ -17,14 +17,19 @@ export const assemblyAi: SttEngine = {
   supports: (language) => language in LANG,
   async transcribe(audio, _mimeType, language): Promise<SegmentTranscript> {
     const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY! });
-    const t = await client.transcripts.transcribe({
-      audio,
-      speech_models: ['universal-3-5-pro'],
-      language_code: LANG[language] ?? 'en',
-      domain: 'medical-v1',
-      speaker_labels: true,
-      keyterms_prompt: keytermsFor(language),
-    });
+    const t = await client.transcripts.transcribe(
+      {
+        audio,
+        speech_models: ['universal-3-5-pro'],
+        language_code: LANG[language] ?? 'en',
+        domain: 'medical-v1',
+        speaker_labels: true,
+        keyterms_prompt: keytermsFor(language),
+      },
+      // Check every second (SDK default 3 s) and never wait forever (SDK default): a stuck job
+      // fails over to the other engine instead of leaving the record in Processing.
+      { pollingInterval: 1000, pollingTimeout: 10 * 60_000 },
+    );
     if (t.status === 'error') throw new Error('Transcription failed at the speech service.');
     const segments = (t.utterances ?? []).map((u) => ({
       start: u.start / 1000,

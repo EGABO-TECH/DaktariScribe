@@ -51,7 +51,15 @@ export async function runRefinement(encounterId: string, opts: RefineOptions = {
   const [enc] = await db.select().from(encounter).where(eq(encounter.id, encounterId)).limit(1);
   if (!enc || enc.status === 'final') return 'skipped';
 
-  const srcRows = await db.select().from(source).where(eq(source.encounterId, enc.id)).orderBy(source.createdAt);
+  // Independent reads in parallel (each is a network round trip to the database).
+  const [srcRows, [tpl], [{ maxNo }]] = await Promise.all([
+    db.select().from(source).where(eq(source.encounterId, enc.id)).orderBy(source.createdAt),
+    db.select().from(template).where(eq(template.id, enc.templateId)).limit(1),
+    db
+      .select({ maxNo: sql<number>`coalesce(max(${refinedVersion.versionNo}), 0)` })
+      .from(refinedVersion)
+      .where(eq(refinedVersion.encounterId, enc.id)),
+  ]);
   if (srcRows.some((s) => s.status === 'pending' || s.status === 'processing')) {
     // Transcription/extraction still running; their jobs re-request refinement when done.
     return 'skipped';
@@ -61,7 +69,6 @@ export async function runRefinement(encounterId: string, opts: RefineOptions = {
     .map((s) => ({ id: s.id, text: decryptString(s.rawText!) }))
     .filter((s) => s.text.trim().length > 0);
 
-  const [tpl] = await db.select().from(template).where(eq(template.id, enc.templateId)).limit(1);
   const def = templateDefinition.parse(tpl.definition);
 
   let content: RefinedRecord;
@@ -108,10 +115,6 @@ export async function runRefinement(encounterId: string, opts: RefineOptions = {
     }
   }
 
-  const [{ maxNo }] = await db
-    .select({ maxNo: sql<number>`coalesce(max(${refinedVersion.versionNo}), 0)` })
-    .from(refinedVersion)
-    .where(eq(refinedVersion.encounterId, enc.id));
   const versionId = newId();
   await db.batch([
     db.insert(refinedVersion).values({

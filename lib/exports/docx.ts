@@ -314,12 +314,15 @@ function summaryChildren(doc: ExportDoc): (Paragraph | Table)[] {
 
 export async function renderDocx(doc: ExportDoc): Promise<Buffer> {
   const dir = path.join(process.cwd(), 'public', 'fonts');
+  // Missing font or logo files must not fail the download: the document then uses Word's own font.
+  const read = (p: string) => fs.readFile(p).catch(() => null);
   const [regular, bold, italic, logo] = await Promise.all([
-    fs.readFile(path.join(dir, 'NotoSans-Regular.ttf')),
-    fs.readFile(path.join(dir, 'NotoSans-Bold.ttf')),
-    fs.readFile(path.join(dir, 'NotoSans-Italic.ttf')),
-    fs.readFile(path.join(process.cwd(), 'public', 'assets', 'report-mark.png')).catch(() => null),
+    read(path.join(dir, 'NotoSans-Regular.ttf')),
+    read(path.join(dir, 'NotoSans-Bold.ttf')),
+    read(path.join(dir, 'NotoSans-Italic.ttf')),
+    read(path.join(process.cwd(), 'public', 'assets', 'report-mark.png')),
   ]);
+  const embedFonts = Boolean(regular && bold && italic);
   const L = doc.labels;
   const docTitle = doc.aggregate ? L.t('aggregateTitle') : L.t('reportTitle');
   const ref = doc.aggregate ? `${doc.records.length} ${L.t('records').toLowerCase()}` : (doc.records[0]?.id ?? '');
@@ -389,7 +392,7 @@ export async function renderDocx(doc: ExportDoc): Promise<Buffer> {
     creator: 'DaktariScribe',
     title: `${docTitle} ${ref}`.trim(),
     description: L.t('confidentiality'),
-    fonts: [{ name: FONT, data: regular, bold, italic }],
+    ...(embedFonts ? { fonts: [{ name: FONT, data: regular!, bold: bold!, italic: italic! }] } : {}),
     styles: {
       default: { document: { run: { font: FONT, size: 20, color: INK } } },
       paragraphStyles: [

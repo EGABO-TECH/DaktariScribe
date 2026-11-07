@@ -11,16 +11,20 @@ export async function GET(_request: Request, ctx: RouteContext<'/api/encounters/
   try {
     const auth = await requireAuth();
     const db = getDb();
-    const [enc] = await db
-      .select({ status: schema.encounter.status })
-      .from(schema.encounter)
-      .where(and(encounterScope(auth), eq(schema.encounter.id, id)))
-      .limit(1);
+    // Polled every second while processing: both reads in one round trip. Sources are only
+    // returned once the scoped encounter query confirms access.
+    const [[enc], sources] = await Promise.all([
+      db
+        .select({ status: schema.encounter.status })
+        .from(schema.encounter)
+        .where(and(encounterScope(auth), eq(schema.encounter.id, id)))
+        .limit(1),
+      db
+        .select({ id: schema.source.id, kind: schema.source.kind, status: schema.source.status, error: schema.source.error })
+        .from(schema.source)
+        .where(eq(schema.source.encounterId, id)),
+    ]);
     if (!enc) throw new NotFoundError();
-    const sources = await db
-      .select({ id: schema.source.id, kind: schema.source.kind, status: schema.source.status, error: schema.source.error })
-      .from(schema.source)
-      .where(eq(schema.source.encounterId, id));
     let step: 'uploading' | 'transcribing' | 'organising' | 'ready' = 'organising';
     if (enc.status === 'in_review' || enc.status === 'final') step = 'ready';
     else if (sources.some((s) => s.status === 'pending_upload')) step = 'uploading';

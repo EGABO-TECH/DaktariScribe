@@ -30,9 +30,16 @@ export async function renderExport(doc: ExportDoc, format: ExportFormat): Promis
     const { renderPptx } = await import('./pptx');
     return renderPptx(doc, await logo());
   }
-  registerReportFonts(path.join(process.cwd(), 'public', 'fonts'));
   const l = await logo();
-  return renderToBuffer(React.createElement(ReportPdf, { doc, logoSrc: l ?? undefined, fontsRegistered: true }) as Parameters<typeof renderToBuffer>[0]);
+  const fontsDir = path.join(process.cwd(), 'public', 'fonts');
+  // If the fonts didn't ship with the server, fall back to built-in Helvetica rather than fail
+  // the download (Latin scripts still render correctly).
+  const fontsOk = await fs
+    .access(path.join(fontsDir, 'NotoSans-Regular.ttf'))
+    .then(() => true)
+    .catch(() => false);
+  if (fontsOk) registerReportFonts(fontsDir);
+  return renderToBuffer(React.createElement(ReportPdf, { doc, logoSrc: l ?? undefined, fontsRegistered: fontsOk }) as Parameters<typeof renderToBuffer>[0]);
 }
 
 export function exportFilename(doc: ExportDoc, format: ExportFormat): string {

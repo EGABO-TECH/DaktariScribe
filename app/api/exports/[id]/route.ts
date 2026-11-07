@@ -9,6 +9,8 @@ import { getRecordDetail, recordExport } from '@/lib/records/service';
 import { exportWatermark } from '@/lib/billing/entitlements';
 
 export const runtime = 'nodejs';
+// Same allowance as POST /api/exports: a cold start plus rendering must never hit the host's short default.
+export const maxDuration = 300;
 
 /**
  * GET /api/exports/:id — English PDF of one signed-off record (the quick download link).
