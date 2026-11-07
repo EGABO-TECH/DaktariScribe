@@ -28,6 +28,15 @@ const { encounter, source, refinedVersion, template } = schema;
 
 export type RefineOutcome = 'organised' | 'original' | 'skipped';
 
+/**
+ * Client errors that retrying can't fix: no credit, bad key, no access, bad request.
+ * Timeouts, conflicts and rate limits (408/409/429) and server errors stay retryable.
+ */
+export function isPermanentProviderError(err: unknown): boolean {
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && status >= 400 && status < 500 && ![408, 409, 429].includes(status);
+}
+
 export type RefineOptions = {
   /** Who asked (for the usage ledger). Defaults to the author. */
   requestedBy?: string;
@@ -90,8 +99,10 @@ export async function runRefinement(encounterId: string, opts: RefineOptions = {
       createdBy = 'ai';
       verification = { ...result.summary, mode: 'organised' };
     } catch (err) {
-      logger.error('refine.processor_failed', { encounterId: enc.id, declined: err instanceof ProcessingDeclinedError, err });
-      if (!(err instanceof ProcessingDeclinedError) && opts.rethrow) throw err; // let the job runner retry
+      const declined = err instanceof ProcessingDeclinedError;
+      const permanent = isPermanentProviderError(err);
+      logger.error('refine.processor_failed', { encounterId: enc.id, declined, permanent, err });
+      if (!declined && !permanent && opts.rethrow) throw err; // let the job runner retry
       content = recordFromSources(sources, def);
       verification = { mode: 'original', reason: err instanceof ProcessingDeclinedError ? 'declined' : 'failed' };
     }

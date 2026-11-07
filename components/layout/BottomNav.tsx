@@ -18,6 +18,7 @@ export default function BottomNav() {
             key={href}
             href={href}
             aria-current={active ? 'page' : undefined}
+            data-tour={`nav-${href.slice(1)}`}
             className={`flex min-w-16 flex-1 flex-col items-center justify-center gap-0.5 text-[12px] font-semibold transition-colors ${
               active ? 'text-secondary' : 'text-on-surface-variant hover:text-on-surface'
             }`}

@@ -3,14 +3,19 @@
  * local dev server) jobs run as Inngest functions with retries. Otherwise they run in-process
  * right after the response (next/server `after`), with a small local retry loop, so the app
  * is fully functional without Inngest in development and small deployments.
+ *
+ * In `next dev` the cloud keys are ignored unless INNGEST_DEV=1: Inngest Cloud can't reach
+ * localhost to run the functions, so events sent there would leave records in Processing forever.
  */
 import { after } from 'next/server';
 import { logger } from '@/lib/logger';
 import type { JobEvent } from './events';
 import { handle, onFailure } from './handlers';
 
-export function inngestEnabled(): boolean {
-  return Boolean(process.env.INNGEST_EVENT_KEY || process.env.INNGEST_DEV);
+export function inngestEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  if (env.INNGEST_DEV) return true;
+  if (env.NODE_ENV === 'development') return false;
+  return Boolean(env.INNGEST_EVENT_KEY);
 }
 
 async function runInline(event: JobEvent, attempts = 3) {

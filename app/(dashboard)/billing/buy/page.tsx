@@ -29,7 +29,7 @@ export default async function BuyPage({ searchParams }: { searchParams: Promise<
   });
 
   return (
-    <PageShell title="Buy a pass" width="max-w-3xl" description="Prepaid. Does not renew automatically.">
+    <PageShell title="Buy a pass" icon="shopping_cart" back={{ href: '/billing', label: 'Billing' }} width="max-w-3xl" description="Prepaid. Does not renew automatically.">
       {nylonPayConfigured() ? <BuyFlow products={products} initial={initial} /> : <ServiceNotice title="Payments are not set up yet">Ask the administrator to add the Nylon Pay keys.</ServiceNotice>}
     </PageShell>
   );

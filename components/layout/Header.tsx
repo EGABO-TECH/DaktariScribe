@@ -7,6 +7,7 @@ import PassChip from '@/components/billing/PassChip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { ADMIN_LINKS, visibleLinks } from './nav-links';
 import { useWorkspaceAccess } from './use-workspace-access';
+import { useTour } from '@/components/tour/TourProvider';
 
 type Theme = 'light' | 'dark';
 
@@ -52,6 +53,24 @@ function ThemeToggle() {
   );
 }
 
+function HelpButton() {
+  const { start } = useTour();
+  return (
+    <button
+      type="button"
+      onClick={start}
+      data-tour="tour-help"
+      aria-label="Take the guided tour"
+      title="Take the guided tour"
+      className="flex h-12 w-12 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high"
+    >
+      <span className="material-symbols-outlined" aria-hidden="true">
+        help
+      </span>
+    </button>
+  );
+}
+
 export default function Header() {
   const { user, isLoaded } = useUser();
   const name = isLoaded && user ? user.firstName || user.username || '' : '';
@@ -73,7 +92,10 @@ export default function Header() {
         <SyncStatus />
         {/* Passes can differ per workspace, so reload the chip after a switch. */}
         <PassChip key={orgId ?? 'personal'} />
-        <WorkspaceSwitcher />
+        <div data-tour="workspace-switcher" className="min-w-0">
+          <WorkspaceSwitcher />
+        </div>
+        <HelpButton />
         <ThemeToggle />
         {adminLinks.length ? (
           <UserButton>

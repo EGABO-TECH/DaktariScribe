@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx --env-file=.env.local db/seed.ts",
-    "eval:refine": "tsx scripts/eval-refine.ts"
+    "eval:refine": "tsx scripts/eval-refine.ts",
+    "jobs:retry": "tsx --env-file=.env.local scripts/process-stuck.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",

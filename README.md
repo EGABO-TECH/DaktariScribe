@@ -238,11 +238,11 @@ npm start
 | Area | What works | Needs |
 |---|---|---|
 | **Capture** (`/field-entry`) | Type, record (5-minute segments, level meter) or upload (photos, PDF, Word, Excel, CSV). Everything is saved encrypted on the device first and works offline; "Process" queues it and it uploads when online | — |
-| **Organising** | Notes are tidied into the template. Every line links to the exact original text; code checks block invented numbers, units, dates, medicines and dropped negations | `ANTHROPIC_API_KEY` (without it the original note is used as the draft) |
+| **Organising** | Notes are tidied into the template. Every line links to the exact original text; code checks block invented numbers, units, dates, medicines and dropped negations | Any free provider key: `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, … (tried in order; without one the original note is used as the draft). Prototype only: free tiers may log data, so use test data |
 | **Transcription** | English: AssemblyAI (Medical Mode, speaker labels, keyterms). Ugandan/African languages: Sunbird AI. Engine fallback, segment stitching, repeat/silence guard | `ASSEMBLYAI_API_KEY`, `SUNBIRD_USERNAME`/`SUNBIRD_PASSWORD` |
-| **Uploads** | DOCX/XLSX/CSV/text PDF parsed on the server; photos and scans read by transcribe-only OCR | OCR needs `ANTHROPIC_API_KEY` |
+| **Uploads** | DOCX/XLSX/CSV/text PDF parsed on the server; photos and scans read by transcribe-only OCR | Photo OCR needs `GEMINI_API_KEY` or `GROQ_API_KEY`; scanned PDFs need `GEMINI_API_KEY` |
 | **Review** (`/records/[id]/review`) | Original beside the draft, click a line to see its source and hear the audio, word diff, accept/edit/reject, flags; sign-off blocked while flags remain | — |
-| **Exports** | PDF, Word and slides for one record or a filtered set, in a chosen language; numbers, doses and names are protected during translation | Translation needs Sunbird or `ANTHROPIC_API_KEY` |
+| **Exports** | PDF, Word and slides for one record or a filtered set, in a chosen language; numbers, doses and names are protected during translation | Translation needs Sunbird or any free provider key |
 | **Insights** (`/insights`, supervisors) | Charts of confirmed recorded values over time and by site, Build deck | — |
 | **Billing** (`/pricing`, `/billing`) | 7-day trial (one per account and phone), prepaid UGX passes, top-ups, team seats, mobile money and card, idempotent webhooks, receipts, cost ledger (`/admin/costs`) | `NYLONPAY_*` (billing is off until set) |
 | **Audit** (`/admin/audit`) | Views, edits, sign-offs, exports and payments, without patient content | — |
@@ -256,7 +256,8 @@ npm run db:migrate && npm run db:seed
 npm run dev                       # development
 npm run build && npm start        # production (webpack build, includes the service worker)
 npm test                          # unit tests
-npm run eval:refine               # refinement eval (needs ANTHROPIC_API_KEY); --offline to self-check
+npm run eval:refine               # refinement eval (needs a provider key); --offline to self-check
+npm run jobs:retry                # re-run records stuck in Processing
 npm run check:copy                # copy check for AI-sounding wording
 ```
 

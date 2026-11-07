@@ -4,10 +4,12 @@ import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import OfflineBanner from '@/components/layout/OfflineBanner';
 import DeviceProvider from '@/components/offline/DeviceProvider';
+import TourProvider from '@/components/tour/TourProvider';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <DeviceProvider>
+    <TourProvider>
     <div className="flex min-h-screen overflow-hidden bg-background font-body-md text-on-background">
       <a
         href="#main"
@@ -23,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       <BottomNav />
     </div>
+    </TourProvider>
     </DeviceProvider>
   );
 }

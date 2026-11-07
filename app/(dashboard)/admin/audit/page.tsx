@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
+import { Card, EmptyState, table } from '@/components/ui/kit';
 import { getDb, isDatabaseConfigured, schema } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewAudit } from '@/lib/roles';
@@ -40,30 +41,37 @@ export default async function AuditPage() {
   const rows = await getDb().select().from(schema.auditLog).where(eq(schema.auditLog.orgId, ctx.orgId)).orderBy(desc(schema.auditLog.createdAt)).limit(300);
   const fmt = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Africa/Kampala' });
   return (
-    <PageShell title="Audit log" description="Who viewed, changed, signed off and exported records. Latest 300 entries.">
-      <section className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
-        <table className="w-full min-w-[640px] text-left text-body-md">
-          <thead className="bg-surface-container-low">
-            <tr className="border-b border-outline-variant">
-              <th className="px-4 py-3">Time</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Record / item</th>
-              <th className="px-4 py-3">User ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-outline-variant/60">
-                <td className="px-4 py-2 whitespace-nowrap">{fmt.format(r.createdAt)}</td>
-                <td className="px-4 py-2">{ACTIONS[r.action] ?? r.action}</td>
-                <td className="px-4 py-2 font-label-status text-[12px]">{r.entityId}</td>
-                <td className="px-4 py-2 font-label-status text-[12px]">{r.actorId}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!rows.length && <p className="p-6 text-on-surface-variant">No entries yet.</p>}
-      </section>
+    <PageShell title="Audit log" icon="history" description="Who viewed, changed, signed off and exported records. Latest 300 entries.">
+      <Card id="audit" icon="manage_search" title="Activity" description={`${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} · times in East Africa Time`} padded={!rows.length}>
+        {!rows.length ? (
+          <EmptyState icon="history" title="No entries yet">
+            Views, edits, sign-offs and exports are recorded here automatically.
+          </EmptyState>
+        ) : (
+          <div className={table.wrap}>
+            <table className={`${table.table} min-w-[640px]`}>
+              <thead className={table.head}>
+                <tr>
+                  <th scope="col" className={table.th}>Time</th>
+                  <th scope="col" className={table.th}>Action</th>
+                  <th scope="col" className={table.th}>Record / item</th>
+                  <th scope="col" className={table.th}>User ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className={table.row}>
+                    <td className={`${table.td} whitespace-nowrap text-on-surface-variant`}>{fmt.format(r.createdAt)}</td>
+                    <td className={`${table.td} font-semibold`}>{ACTIONS[r.action] ?? r.action}</td>
+                    <td className={`${table.td} font-label-status text-[12px]`}>{r.entityId}</td>
+                    <td className={`${table.td} font-label-status text-[12px] text-on-surface-variant`}>{r.actorId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </PageShell>
   );
 }

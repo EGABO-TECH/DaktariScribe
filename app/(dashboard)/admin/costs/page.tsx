@@ -1,5 +1,6 @@
 import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
+import { Alert, Card, EmptyState, StatTile, table } from '@/components/ui/kit';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewCosts } from '@/lib/roles';
@@ -40,107 +41,108 @@ export default async function CostsPage() {
   const alerts = r.products.filter((p) => p.alert);
 
   return (
-    <PageShell title="Costs" description={`Revenue and processing costs, last ${r.days} days. Costs are estimates from provider rates.`}>
+    <PageShell title="Costs" icon="payments" description={`Revenue and processing costs, last ${r.days} days. Costs are estimates from provider rates.`}>
       {alerts.length > 0 && (
-        <p role="alert" className="rounded-lg border border-flag bg-flag-container p-3 font-semibold text-on-flag-container">
-          Margin below 20% if fully used: {alerts.map((a) => a.name).join(', ')}.
-        </p>
+        <Alert tone="warning" title="Margin below 20% if fully used">
+          {alerts.map((a) => a.name).join(', ')}.
+        </Alert>
       )}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Totals">
-        {[
-          ['Revenue', formatUgx(r.totals.revenueUgx)],
-          ['Processing cost', formatUgx(r.totals.costUgx)],
-          ['Margin', margin === null ? '—' : `${margin}%`],
-          ['Avg cost per report', `${formatUgx(r.avgCostPerReportUgx.typed)} typed · ${formatUgx(r.avgCostPerReportUgx.voice)} voice`],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-            <p className="text-[13px] font-semibold text-on-surface-variant">{k}</p>
-            <p className="mt-1 text-[20px] font-bold text-on-surface">{v}</p>
-          </div>
-        ))}
+        <StatTile label="Revenue" value={formatUgx(r.totals.revenueUgx)} icon="trending_up" />
+        <StatTile label="Processing cost" value={formatUgx(r.totals.costUgx)} icon="memory" />
+        <StatTile label="Margin" value={margin === null ? '—' : `${margin}%`} icon="percent" />
+        <StatTile
+          label="Avg cost per report"
+          value={formatUgx(r.avgCostPerReportUgx.typed)}
+          hint={`typed · ${formatUgx(r.avgCostPerReportUgx.voice)} voice`}
+          icon="description"
+        />
       </section>
 
-      <section aria-labelledby="prod-h" className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-        <h2 id="prod-h" className="mb-2 font-headline-sm text-headline-sm text-primary">
-          Products
-        </h2>
-        <table className="w-full min-w-[560px] text-left text-body-md">
-          <thead>
-            <tr className="border-b border-outline-variant">
-              <th className="py-2">Product</th>
-              <th className="py-2">Price</th>
-              <th className="py-2">Cost if fully used</th>
-              <th className="py-2">Margin</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.products.map((p) => (
-              <tr key={p.code} className="border-b border-outline-variant/60">
-                <td className="py-1.5">{p.name}</td>
-                <td className="py-1.5">{formatUgx(p.priceUgx)}</td>
-                <td className="py-1.5">{formatUgx(p.fullUseCostUgx)}</td>
-                <td className={`py-1.5 font-semibold ${p.alert ? 'text-error' : ''}`}>
-                  {Math.round(p.margin * 100)}%{p.alert ? ' · below 20%' : ''}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section aria-labelledby="day-h" className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-        <h2 id="day-h" className="mb-2 font-headline-sm text-headline-sm text-primary">
-          By day
-        </h2>
-        {r.byDay.length === 0 ? (
-          <p className="text-on-surface-variant">No activity yet.</p>
-        ) : (
-          <table className="w-full min-w-[420px] text-left text-body-md">
-            <thead>
-              <tr className="border-b border-outline-variant">
-                <th className="py-2">Day</th>
-                <th className="py-2">Revenue</th>
-                <th className="py-2">Cost</th>
+      <Card id="products" icon="sell" title="Products" padded={false}>
+        <div className={table.wrap}>
+          <table className={`${table.table} min-w-[560px]`}>
+            <thead className={table.head}>
+              <tr>
+                <th scope="col" className={table.th}>Product</th>
+                <th scope="col" className={table.th}>Price</th>
+                <th scope="col" className={table.th}>Cost if fully used</th>
+                <th scope="col" className={table.th}>Margin</th>
               </tr>
             </thead>
             <tbody>
-              {r.byDay.map((d) => (
-                <tr key={d.day} className="border-b border-outline-variant/60">
-                  <td className="py-1.5">{d.day}</td>
-                  <td className="py-1.5">{formatUgx(d.revenueUgx)}</td>
-                  <td className="py-1.5">{formatUgx(d.costUgx)}</td>
+              {r.products.map((p) => (
+                <tr key={p.code} className={table.row}>
+                  <td className={`${table.td} font-semibold`}>{p.name}</td>
+                  <td className={table.td}>{formatUgx(p.priceUgx)}</td>
+                  <td className={table.td}>{formatUgx(p.fullUseCostUgx)}</td>
+                  <td className={`${table.td} font-semibold ${p.alert ? 'text-error' : 'text-secondary'}`}>
+                    {Math.round(p.margin * 100)}%{p.alert ? ' · below 20%' : ''}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </section>
+        </div>
+      </Card>
 
-      <section aria-labelledby="user-h" className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-        <h2 id="user-h" className="mb-2 font-headline-sm text-headline-sm text-primary">
-          By user
-        </h2>
-        <table className="w-full min-w-[480px] text-left text-body-md">
-          <thead>
-            <tr className="border-b border-outline-variant">
-              <th className="py-2">User ID</th>
-              <th className="py-2">Reports</th>
-              <th className="py-2">Revenue</th>
-              <th className="py-2">Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.byUser.map((x) => (
-              <tr key={x.userId} className="border-b border-outline-variant/60">
-                <td className="py-1.5 font-label-status text-[12px]">{x.userId}</td>
-                <td className="py-1.5">{x.reports}</td>
-                <td className="py-1.5">{formatUgx(x.revenueUgx)}</td>
-                <td className="py-1.5">{formatUgx(x.costUgx)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card id="by-day" icon="calendar_month" title="By day" padded={r.byDay.length === 0}>
+          {r.byDay.length === 0 ? (
+            <EmptyState icon="calendar_month" title="No activity yet" />
+          ) : (
+            <div className={table.wrap}>
+              <table className={`${table.table} min-w-[360px]`}>
+                <thead className={table.head}>
+                  <tr>
+                    <th scope="col" className={table.th}>Day</th>
+                    <th scope="col" className={table.th}>Revenue</th>
+                    <th scope="col" className={table.th}>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.byDay.map((d) => (
+                    <tr key={d.day} className={table.row}>
+                      <td className={`${table.td} whitespace-nowrap`}>{d.day}</td>
+                      <td className={table.td}>{formatUgx(d.revenueUgx)}</td>
+                      <td className={table.td}>{formatUgx(d.costUgx)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card id="by-user" icon="group" title="By user" padded={r.byUser.length === 0}>
+          {r.byUser.length === 0 ? (
+            <EmptyState icon="group" title="No activity yet" />
+          ) : (
+            <div className={table.wrap}>
+              <table className={`${table.table} min-w-[420px]`}>
+                <thead className={table.head}>
+                  <tr>
+                    <th scope="col" className={table.th}>User ID</th>
+                    <th scope="col" className={table.th}>Reports</th>
+                    <th scope="col" className={table.th}>Revenue</th>
+                    <th scope="col" className={table.th}>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.byUser.map((x) => (
+                    <tr key={x.userId} className={table.row}>
+                      <td className={`${table.td} font-label-status text-[12px]`}>{x.userId}</td>
+                      <td className={table.td}>{x.reports}</td>
+                      <td className={table.td}>{formatUgx(x.revenueUgx)}</td>
+                      <td className={table.td}>{formatUgx(x.costUgx)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
     </PageShell>
   );
 }

@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import InsightsCharts from '@/components/insights/InsightsCharts';
 import ExportPanel from '@/components/exports/ExportPanel';
+import { btn, Card, EmptyState, field, Icon } from '@/components/ui/kit';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewInsights } from '@/lib/roles';
@@ -12,8 +13,8 @@ import { billingEnforced, getActivePass } from '@/lib/billing/entitlements';
 
 export const metadata = { title: 'Insights — DaktariScribe' };
 
-const fieldCls = 'w-full min-h-12 rounded-lg border border-outline bg-surface-container-lowest px-3 text-[16px] text-on-surface';
-const labelCls = 'mb-1 block text-[13px] font-semibold text-on-surface';
+const fieldCls = field.input;
+const labelCls = field.label;
 
 export default async function InsightsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await requireAuth();
@@ -67,8 +68,16 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   }
 
   return (
-    <PageShell title="Insights" description="Recorded values from signed-off records only. Figures are counted directly from what was recorded.">
-      <form method="get" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4" role="search" aria-label="Filter insights">
+    <PageShell
+      title="Insights"
+      icon="bar_chart"
+      description="Recorded values from signed-off records only. Figures are counted directly from what was recorded."
+    >
+      <form method="get" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-[0_1px_2px_rgba(0,29,61,0.04)] md:p-5" role="search" aria-label="Filter insights">
+        <div className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-on-surface">
+          <Icon name="tune" className="text-[20px] text-secondary" />
+          Choose what to chart
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label htmlFor="field" className={labelCls}>
@@ -108,32 +117,33 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
             </select>
           </div>
         </div>
-        <button type="submit" className="mt-4 inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-5 font-semibold text-on-primary hover:bg-primary/90">
-          Apply filters
-        </button>
+        <div className="mt-5 border-t border-outline-variant pt-4">
+          <button type="submit" className={btn.primary}>
+            <Icon name="insights" className="text-[20px]" />
+            Update charts
+          </button>
+        </div>
       </form>
 
       {!data ? (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 text-center">
-          <p className="font-semibold text-on-surface">No recorded values yet.</p>
-          <p className="mt-1 text-body-md text-on-surface-variant">Charts appear once records with measured values (such as temperature or test results) are signed off.</p>
-        </div>
+        <Card>
+          <EmptyState icon="monitoring" title="No recorded values yet">
+            Charts appear once records with measured values (such as temperature or test results) are signed off.
+          </EmptyState>
+        </Card>
       ) : (
-        <>
-          <p className="text-body-md text-on-surface-variant">
-            {data.total} recorded value(s) for <strong className="text-on-surface">{data.metric.label}</strong>.
-          </p>
+        <Card
+          icon="monitoring"
+          title={data.metric.label}
+          description={`${data.total} recorded value${data.total === 1 ? '' : 's'} from signed-off records.`}
+        >
           <InsightsCharts data={data} />
-        </>
+        </Card>
       )}
 
-      <section aria-labelledby="deck-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <h2 id="deck-h" className="mb-3 font-headline-sm text-headline-sm text-primary">
-          Build deck
-        </h2>
-        <p className="mb-3 text-body-md text-on-surface-variant">Uses the same filters: signed-off records in this date range and site.</p>
+      <Card id="deck" icon="slideshow" title="Build a slide deck" description="Uses the same filters: signed-off records in this date range and site.">
         <ExportPanel scope={{ filter: { from: filter.from, to: filter.to, site: filter.site } }} defaultFormat="pptx" />
-      </section>
+      </Card>
     </PageShell>
   );
 }

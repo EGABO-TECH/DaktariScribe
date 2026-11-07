@@ -7,6 +7,7 @@ import { useClerk, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { ADMIN_LINKS, NAV_LINKS, isActive as matchActive, visibleLinks } from './nav-links';
 import { useWorkspaceAccess } from './use-workspace-access';
+import { useTour } from '@/components/tour/TourProvider';
 import { wipeDevice } from '@/lib/offline/db';
 import { lock } from '@/lib/offline/crypto';
 import { pendingCount } from '@/lib/offline/outbox';
@@ -32,6 +33,7 @@ function NavSection({ title, links, pathname }: { title: string; links: NavItem[
                             <Link
                                 href={href}
                                 aria-current={active ? 'page' : undefined}
+                                data-tour={`nav-${href.slice(1).replace(/\//g, '-')}`}
                                 className={`group relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors duration-150 ${focusRing} ${
                                     active
                                         ? 'bg-white/[0.08] font-semibold text-on-nav'
@@ -71,6 +73,7 @@ export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const access = useWorkspaceAccess();
+    const { start: startTour } = useTour();
     const mainLinks = visibleLinks(NAV_LINKS, access);
     const adminLinks = visibleLinks(ADMIN_LINKS, access);
 
@@ -139,6 +142,16 @@ export default function Sidebar() {
                         )}
                     </span>
                 </div>
+                <button
+                    type="button"
+                    onClick={startTour}
+                    className={`mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-on-nav/70 transition-colors duration-150 hover:bg-white/[0.04] hover:text-on-nav ${focusRing}`}
+                >
+                    <span aria-hidden="true" className="material-symbols-outlined text-[22px] text-on-nav/60">
+                        tour
+                    </span>
+                    Take the tour
+                </button>
                 <button
                     type="button"
                     onClick={handleSignOut}

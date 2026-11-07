@@ -1,9 +1,14 @@
 /**
- * Text-processing provider interface (spec §5 Phase 2.1). Implementations must use a paid,
- * no-training API tier. Inputs are pseudonymised by the caller before they reach a provider.
- * Provider and models are chosen by env vars (AI_PROVIDER, AI_MODEL_REFINE, AI_MODEL_FAST).
+ * Text-processing provider interface (spec §5 Phase 2.1). Inputs are pseudonymised by the
+ * caller before they reach a provider.
+ *
+ * Prototype default: a chain of free providers (lib/ai/free-providers.ts), used whenever at
+ * least one of their keys is set. Set AI_PROVIDERS=anthropic to use Anthropic instead
+ * (needs ANTHROPIC_API_KEY and account credit). The spec requires a paid, no-training tier for
+ * production; free tiers may log or train on what they receive, so use test data only.
  */
 import type { ModelOcrOutput, ModelRefineOutput } from './schemas';
+import { configuredProviders } from './free-providers';
 
 export type Usage = { model: string; inputTokens: number; outputTokens: number };
 
@@ -20,7 +25,7 @@ export interface TextProcessor {
 
 export class ProcessorNotConfiguredError extends Error {
   constructor() {
-    super('No text-processing provider is configured (set ANTHROPIC_API_KEY).');
+    super('No text-processing provider is configured (set one of GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, …).');
     this.name = 'ProcessorNotConfiguredError';
   }
 }
@@ -33,9 +38,15 @@ export class ProcessingDeclinedError extends Error {
   }
 }
 
-export function isProcessorConfigured(): boolean {
-  const provider = process.env.AI_PROVIDER ?? 'anthropic';
-  return provider === 'anthropic' && Boolean(process.env.ANTHROPIC_API_KEY);
+type Env = Record<string, string | undefined>;
+
+function wantsAnthropic(env: Env): boolean {
+  return (env.AI_PROVIDERS ?? '').trim().toLowerCase() === 'anthropic';
+}
+
+export function isProcessorConfigured(env: Env = process.env): boolean {
+  if (wantsAnthropic(env)) return Boolean(env.ANTHROPIC_API_KEY);
+  return configuredProviders(env).length > 0;
 }
 
 let cached: TextProcessor | null = null;
@@ -43,7 +54,12 @@ let cached: TextProcessor | null = null;
 export async function getProcessor(): Promise<TextProcessor> {
   if (cached) return cached;
   if (!isProcessorConfigured()) throw new ProcessorNotConfiguredError();
-  const { AnthropicProcessor } = await import('./anthropic');
-  cached = new AnthropicProcessor();
+  if (wantsAnthropic(process.env)) {
+    const { AnthropicProcessor } = await import('./anthropic');
+    cached = new AnthropicProcessor();
+  } else {
+    const { FreeProviderChain } = await import('./free-providers');
+    cached = new FreeProviderChain();
+  }
   return cached;
 }

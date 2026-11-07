@@ -5,7 +5,7 @@ export const metadata = { title: 'Organisation — DaktariScribe' };
 
 export default function OrganisationPage() {
   return (
-    <PageShell title="Organisation" description="Your team, their roles and who can see what." width="max-w-4xl">
+    <PageShell title="Organisation" icon="groups" description="Your team, their roles and who can see what." width="max-w-4xl">
       <OrganisationManager />
     </PageShell>
   );

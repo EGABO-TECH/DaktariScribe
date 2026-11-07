@@ -8,6 +8,7 @@ import StatusBadge from '@/components/records/StatusBadge';
 import ProcessingProgress from '@/components/records/ProcessingProgress';
 import SourceMedia from '@/components/records/SourceMedia';
 import ExportPanel from '@/components/exports/ExportPanel';
+import { Alert, btn, Card, Icon } from '@/components/ui/kit';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { canEdit, canExport } from '@/lib/encounter-status';
@@ -108,62 +109,60 @@ export default async function RecordPage({ params }: PageProps<'/records/[id]'>)
 
   return (
     <PageShell
-      title="Record"
+      title={record.template.name}
       width="max-w-5xl"
+      back={{ href: '/saved-records', label: 'Saved records' }}
+      description={`${record.site} · ${dateFmt(record.encounterDate)}`}
       actions={
-        <Link href="/saved-records" className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-secondary hover:bg-secondary/10">
-          <span className="material-symbols-outlined" aria-hidden="true">
-            arrow_back
-          </span>
-          Saved records
-        </Link>
+        v && record.status === 'in_review' ? (
+          <Link href={`/records/${encodeURIComponent(record.id)}/review`} className={btn.primary}>
+            <Icon name="rate_review" />
+            Open review
+          </Link>
+        ) : undefined
       }
     >
-      {/* Header */}
-      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* Summary */}
+      <Card padded={false}>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant bg-surface-container-low/60 px-4 py-4 md:px-6">
           <div className="min-w-0">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant">Record ID</p>
             <p className="font-label-status text-[16px] font-semibold text-primary break-all">{record.id}</p>
           </div>
           <StatusBadge status={record.status} />
         </div>
-        <div className="mt-4">
+        <div className="flex flex-col gap-5 p-4 md:p-6">
           <Progress status={record.status} />
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+            {meta.map(([k, val]) => (
+              <div key={k}>
+                <dt className="text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant">{k}</dt>
+                <dd className="mt-0.5 text-body-md font-medium text-on-surface">{val}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-          {meta.map(([k, val]) => (
-            <div key={k}>
-              <dt className="text-[12px] font-semibold uppercase tracking-wider text-on-surface-variant">{k}</dt>
-              <dd className="text-body-md text-on-surface">{val}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      </Card>
 
       {record.status === 'processing' && (
-        <section aria-label="Progress" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-          <h2 className="mb-3 font-headline-sm text-headline-sm text-primary">Preparing the draft</h2>
+        <Card id="progress" icon="hourglass_top" title="Preparing the draft" description="This usually takes under a minute. You can leave this page; the record keeps processing.">
           <ProcessingProgress recordId={record.id} initialStep={initialStep(record)} />
-        </section>
+        </Card>
       )}
 
       {v && record.status === 'in_review' && (
-        <section
-          className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
-            blockingFlags ? 'border-flag bg-flag-container text-on-flag-container' : 'border-secondary bg-success-container text-on-success-container'
-          }`}
+        <Alert
+          tone={blockingFlags ? 'warning' : 'success'}
+          title={blockingFlags ? `${blockingFlags} item(s) need checking before sign-off` : 'Ready for review'}
+          action={
+            <Link href={`/records/${encodeURIComponent(record.id)}/review`} className={btn.primary}>
+              <Icon name="rate_review" />
+              Open review
+            </Link>
+          }
         >
-          <p className="font-semibold">
-            {blockingFlags ? `${blockingFlags} item(s) need checking before sign-off.` : 'Ready for review. Compare the draft with the original before signing off.'}
-          </p>
-          <Link href={`/records/${encodeURIComponent(record.id)}/review`} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-5 font-semibold text-on-primary hover:bg-primary/90">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              rate_review
-            </span>
-            Open review
-          </Link>
-        </section>
+          Compare the draft with the original notes, fix anything that is wrong, then sign off.
+        </Alert>
       )}
 
       {/* Current version */}
@@ -182,10 +181,7 @@ export default async function RecordPage({ params }: PageProps<'/records/[id]'>)
 
       {/* Sign-off / export */}
       {record.status !== 'processing' && (
-        <section aria-labelledby="signoff-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-          <h2 id="signoff-h" className="mb-3 font-headline-sm text-headline-sm text-primary">
-            {record.status === 'final' ? 'Signed off' : 'Review and sign off'}
-          </h2>
+        <Card id="signoff" icon={record.status === 'final' ? 'verified' : 'draw'} title={record.status === 'final' ? 'Signed off' : 'Review and sign off'}>
           {record.status === 'final' && record.signoff ? (
             <div className="flex flex-col gap-4">
               <div className="flex items-start gap-3 rounded-lg border border-secondary bg-success-container p-3 text-on-success-container">
@@ -212,15 +208,11 @@ export default async function RecordPage({ params }: PageProps<'/records/[id]'>)
               blockingFlags={blockingFlags}
             />
           ) : null}
-        </section>
+        </Card>
       )}
 
       {/* Original source(s) */}
-      <section aria-labelledby="sources-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <h2 id="sources-h" className="mb-1 font-headline-sm text-headline-sm text-primary">
-          Original notes
-        </h2>
-        <p className="mb-3 text-[13px] text-on-surface-variant">Stored exactly as captured. Originals are never changed.</p>
+      <Card id="sources" icon="inventory_2" title="Original notes" description="Stored exactly as captured. Originals are never changed.">
         <div className="flex flex-col gap-2">
           {record.sources.map((s) => (
             <details key={s.id} className="rounded-lg border border-outline-variant" open={record.sources.length === 1}>
@@ -239,14 +231,11 @@ export default async function RecordPage({ params }: PageProps<'/records/[id]'>)
             </details>
           ))}
         </div>
-      </section>
+      </Card>
 
       {/* History */}
-      <section aria-labelledby="history-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <h2 id="history-h" className="mb-3 font-headline-sm text-headline-sm text-primary">
-          History
-        </h2>
-        <ol className="flex flex-col gap-2">
+      <Card id="history" icon="history" title="History">
+        <ol className="flex flex-col gap-3 border-l-2 border-outline-variant pl-4">
           {record.signoff && (
             <li className="flex flex-wrap items-center gap-2 text-body-md text-on-surface">
               <span className="material-symbols-outlined text-[20px] text-secondary" aria-hidden="true">
@@ -274,7 +263,7 @@ export default async function RecordPage({ params }: PageProps<'/records/[id]'>)
             </li>
           ))}
         </ol>
-      </section>
+      </Card>
     </PageShell>
   );
 }

@@ -9,6 +9,7 @@ import { useDevice } from '@/components/offline/DeviceProvider';
 import Recorder from './Recorder';
 import UploadPicker from './UploadPicker';
 import DraftPdfButton from './DraftPdfButton';
+import { Alert, btn, EmptyState, field, Icon } from '@/components/ui/kit';
 import { db, draftStore, type Draft, type DraftHeader } from '@/lib/offline/db';
 import { discard as discardOutbox, enqueue, onOutboxChange, pendingItems, retry, type OutboxView } from '@/lib/offline/outbox';
 import { INTERVIEW_LANGUAGES } from '@/lib/records/languages';
@@ -47,9 +48,30 @@ function newDraft(templates: TemplateOption[], prev?: DraftHeader): Draft {
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-const inputCls =
-  'w-full min-h-12 rounded-lg border border-outline bg-surface-container-lowest px-3 text-[16px] text-on-surface placeholder:text-on-surface-variant/80 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30';
-const labelCls = 'block text-[13px] font-semibold text-on-surface mb-1';
+const inputCls = field.input;
+const labelCls = field.label;
+
+function StepHeading({ n, id, title, hint, children }: { n: number; id: string; title: string; hint: string; children?: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-[14px] font-bold text-on-primary" aria-hidden="true">
+          {n}
+        </span>
+        <div>
+          <h2 id={id} className="font-headline-sm text-[18px] font-semibold leading-8 text-primary">
+            <span className="sr-only">Step {n}: </span>
+            {title}
+          </h2>
+          <p className="text-body-md text-on-surface-variant">{hint}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const cardCls = 'rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-[0_1px_2px_rgba(0,29,61,0.04)] md:p-6';
 
 const OUTBOX_LABEL: Record<OutboxView['status'], string> = {
   queued: 'Waiting to upload',
@@ -237,9 +259,10 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
 
   if (!templates.length) {
     return (
-      <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 text-on-surface">
-        <h2 className="font-headline-sm text-headline-sm text-primary mb-1">No templates available</h2>
-        <p className="text-body-md text-on-surface-variant">Templates have not been set up for this workspace yet. Ask an administrator to run the template seed.</p>
+      <div className={cardCls}>
+        <EmptyState icon="assignment" title="No templates available">
+          Templates have not been set up for this workspace yet. Ask an administrator to run the template seed.
+        </EmptyState>
       </div>
     );
   }
@@ -251,26 +274,17 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
   ] as const;
 
   return (
-    <div className="flex flex-col gap-gutter pb-28 lg:pb-0">
-      {notice && (
-        <p role="status" className="rounded-lg border border-secondary bg-success-container p-3 text-[14px] font-semibold text-on-success-container">
-          {notice}
-        </p>
-      )}
+    <div className="flex flex-col gap-6 pb-28 lg:pb-0">
+      {notice && <Alert tone="success">{notice}</Alert>}
 
       {/* Encounter details */}
-      <section aria-labelledby="enc-details" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="enc-details" className="font-headline-sm text-headline-sm text-primary">
-            Encounter details
-          </h2>
-          <button type="button" onClick={startNew} className="inline-flex min-h-12 items-center gap-1.5 rounded-lg px-3 text-[14px] font-semibold text-secondary hover:bg-secondary/10">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-              add
-            </span>
+      <section aria-labelledby="enc-details" className={cardCls} data-tour="encounter-details">
+        <StepHeading n={1} id="enc-details" title="Encounter details" hint="Who, where and when. Use a local ID, never a name.">
+          <button type="button" onClick={startNew} className={btn.ghost}>
+            <Icon name="add" className="text-[20px]" />
             New encounter
           </button>
-        </div>
+        </StepHeading>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="tpl" className={labelCls}>
@@ -315,7 +329,7 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
             </select>
           </div>
           <div className="flex items-end">
-            <label className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-lg border border-outline px-3 has-[:checked]:border-secondary has-[:checked]:bg-success-container">
+            <label className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-lg border border-outline-variant px-3 transition-colors hover:border-outline has-[:checked]:border-secondary has-[:checked]:bg-success-container">
               <input type="checkbox" className="h-6 w-6 shrink-0 accent-[var(--color-secondary)]" checked={draft.header.consentObtained} onChange={(e) => update({ consentObtained: e.target.checked })} />
               <span className="text-[14px] font-semibold text-on-surface">Consent obtained from the respondent</span>
             </label>
@@ -324,8 +338,9 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
       </section>
 
       {/* Capture */}
-      <section aria-label="Capture" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-        <div role="tablist" aria-label="Capture method" className="mb-4 grid grid-cols-3 rounded-lg border border-outline-variant bg-surface-container-low p-1 sm:inline-grid">
+      <section aria-labelledby="capture-h" className={cardCls}>
+        <StepHeading n={2} id="capture-h" title="Capture the notes" hint="Type, record your voice, or upload photos and documents. You can combine them." />
+        <div role="tablist" aria-label="Capture method" data-tour="capture-methods" className="mb-5 grid grid-cols-3 rounded-lg border border-outline-variant bg-surface-container-low p-1 sm:inline-grid">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -374,7 +389,7 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
               rows={14}
               spellCheck
               placeholder={'Type the encounter as you would on paper.\nLeave a blank line between paragraphs.'}
-              className="w-full min-h-[320px] resize-y rounded-lg border border-outline bg-surface-container-lowest p-4 text-[16px] leading-7 text-on-surface placeholder:text-on-surface-variant/80 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
+              className="w-full min-h-[320px] resize-y rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-[16px] leading-7 text-on-surface placeholder:text-on-surface-variant/80 transition-colors hover:border-outline focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25"
             />
           </div>
         )}
@@ -389,29 +404,31 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
           </div>
         )}
 
-        <p className="mt-3 text-[13px] text-on-surface-variant">
+        <p className="mt-3 flex items-start gap-2 text-[13px] text-on-surface-variant">
+          <Icon name="lock" className="text-[16px]" />
           Your notes, recordings and files are kept exactly as captured. You review the record and sign it off before it becomes final.
         </p>
 
         {errors.length > 0 && (
-          <div role="alert" className="mt-4 rounded-lg border border-error bg-error-container p-3 text-[14px] text-on-error-container">
-            <p className="font-semibold">Before you continue:</p>
-            <ul className="mt-1 list-disc pl-5">
-              {errors.map((e) => (
-                <li key={e}>{e}</li>
-              ))}
-            </ul>
+          <div className="mt-4">
+            <Alert tone="error" title="Before you continue:">
+              <ul className="list-disc pl-5">
+                {errors.map((e) => (
+                  <li key={e}>{e}</li>
+                ))}
+              </ul>
+            </Alert>
           </div>
         )}
 
-        <div className="fixed inset-x-0 bottom-16 z-40 flex gap-3 border-t border-outline-variant bg-surface-container-lowest p-3 lg:static lg:mt-4 lg:justify-end lg:border-0 lg:bg-transparent lg:p-0">
+        <div className="fixed inset-x-0 bottom-16 z-40 flex gap-3 border-t border-outline-variant bg-surface-container-lowest p-3 shadow-[0_-4px_12px_rgba(0,29,61,0.06)] lg:static lg:mt-6 lg:justify-end lg:border-t lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-5 lg:shadow-none">
           <button
             type="button"
             onClick={() => {
               dirty.current = true;
               void persist();
             }}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-secondary px-5 font-semibold text-secondary hover:bg-secondary/10 lg:flex-none"
+            className={`${btn.outline} flex-1 lg:flex-none`}
           >
             <span className="material-symbols-outlined" aria-hidden="true">
               save
@@ -422,7 +439,8 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
             type="button"
             onClick={processNote}
             disabled={submitting}
-            className="inline-flex min-h-12 flex-[1.4] items-center justify-center gap-2 rounded-lg bg-primary px-6 font-semibold text-on-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 lg:flex-none"
+            data-tour="process-button"
+            className={`${btn.primary} flex-[1.4] px-6 lg:flex-none`}
           >
             <span className="material-symbols-outlined" aria-hidden="true">
               {online ? 'arrow_forward' : 'schedule_send'}
@@ -433,9 +451,10 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
       </section>
 
       {queue.length > 0 && (
-        <section aria-labelledby="queue-h" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-          <h2 id="queue-h" className="mb-3 font-headline-sm text-headline-sm text-primary">
-            Waiting to upload <span className="text-body-md font-normal text-on-surface-variant">· {pending}</span>
+        <section aria-labelledby="queue-h" className={cardCls}>
+          <h2 id="queue-h" className="mb-3 flex items-center gap-2 font-headline-sm text-[18px] font-semibold text-primary">
+            <Icon name="cloud_upload" className="text-secondary" />
+            Waiting to upload <span className="rounded-full bg-surface-container-high px-2 text-[13px] font-semibold text-on-surface-variant">{pending}</span>
           </h2>
           <ul className="divide-y divide-outline-variant">
             {queue.map((q) => (
@@ -471,8 +490,9 @@ function Capture({ templates }: { templates: TemplateOption[] }) {
       )}
 
       {drafts.length > 0 && (
-        <section aria-labelledby="device-drafts" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-          <h2 id="device-drafts" className="font-headline-sm text-headline-sm text-primary mb-3">
+        <section aria-labelledby="device-drafts" className={cardCls}>
+          <h2 id="device-drafts" className="mb-3 flex items-center gap-2 font-headline-sm text-[18px] font-semibold text-primary">
+            <Icon name="edit_document" className="text-secondary" />
             Drafts on this device
           </h2>
           <ul className="divide-y divide-outline-variant">

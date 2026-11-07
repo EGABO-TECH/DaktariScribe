@@ -17,7 +17,8 @@ export const RATES_USD_MICROS = {
 };
 
 export function llmCostMicros(model: string, inputTokens: number, outputTokens: number): number {
-  const r = RATES_USD_MICROS.llm[model] ?? RATES_USD_MICROS.llm['claude-sonnet-5-5'];
+  // Free-tier providers (recorded as "<provider>/<model>") cost nothing on the ledger.
+  const r = RATES_USD_MICROS.llm[model] ?? (model.startsWith('claude-') ? RATES_USD_MICROS.llm['claude-sonnet-5-5'] : { input: 0, output: 0 });
   return Math.round(inputTokens * r.input + outputTokens * r.output);
 }
 

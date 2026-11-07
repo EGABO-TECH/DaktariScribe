@@ -25,7 +25,7 @@ export default async function FieldEntryPage() {
   const options = templates ?? GLOBAL_TEMPLATES.map((t) => ({ id: t.id, name: t.name }));
 
   return (
-    <PageShell title="Field Entry" description="Capture an encounter. Drafts are saved on this device as you type.">
+    <PageShell title="Field Entry" icon="edit_note" width="max-w-5xl" description="Capture an encounter. Drafts are saved on this device as you type.">
       {degraded && (
         <ServiceNotice title="Records service unavailable">
           You can keep typing and saving drafts on this device. Processing will work again once the service is back.

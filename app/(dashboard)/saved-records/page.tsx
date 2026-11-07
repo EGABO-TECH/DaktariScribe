@@ -3,6 +3,7 @@ import Link from 'next/link';
 import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import StatusBadge from '@/components/records/StatusBadge';
+import { btn, EmptyState, field, Icon, table } from '@/components/ui/kit';
 import { isDatabaseConfigured } from '@/db';
 import { canSeeWholeOrg, requireAuth } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -18,9 +19,8 @@ const STATUS_OPTIONS = [
   { value: 'draft', label: 'Draft' },
 ];
 
-const fieldCls =
-  'w-full min-h-12 rounded-lg border border-outline bg-surface-container-lowest px-3 text-[16px] text-on-surface focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30';
-const labelCls = 'block text-[13px] font-semibold text-on-surface mb-1';
+const fieldCls = field.input;
+const labelCls = field.label;
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`));
@@ -75,10 +75,22 @@ export default async function SavedRecordsPage({ searchParams }: { searchParams:
   return (
     <PageShell
       title="Saved Records"
+      icon="library_books"
       description={supervisor ? 'All encounters recorded in your organisation.' : 'Encounters you have recorded.'}
+      actions={
+        <Link href="/field-entry" className={btn.accent}>
+          <Icon name="add" className="text-[20px]" />
+          New encounter
+        </Link>
+      }
     >
       {/* Filters: a plain GET form, so it works without JavaScript and the URL is shareable */}
-      <form method="get" action="/saved-records" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4" role="search" aria-label="Filter records">
+      <form method="get" action="/saved-records" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-[0_1px_2px_rgba(0,29,61,0.04)] md:p-5" role="search" aria-label="Filter records">
+        <div className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-on-surface">
+          <Icon name="tune" className="text-[20px] text-secondary" />
+          Filter records
+          {hasFilters && <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[12px] text-secondary">Filters on</span>}
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <label htmlFor="q" className={labelCls}>
@@ -139,84 +151,111 @@ export default async function SavedRecordsPage({ searchParams }: { searchParams:
             </div>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button type="submit" className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-5 font-semibold text-on-primary hover:bg-primary/90">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
-              filter_list
-            </span>
+        <div className="mt-5 flex flex-wrap gap-3 border-t border-outline-variant pt-4">
+          <button type="submit" className={btn.primary}>
+            <Icon name="filter_list" className="text-[20px]" />
             Apply filters
           </button>
           {hasFilters && (
-            <Link href="/saved-records" className="inline-flex min-h-12 items-center rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10">
-              Clear
+            <Link href="/saved-records" className={btn.ghost}>
+              <Icon name="close" className="text-[20px]" />
+              Clear filters
             </Link>
           )}
         </div>
       </form>
 
-      <section aria-label="Records" className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
-        {data.rows.length === 0 ? (
-          <div className="p-8 text-center">
-            <span className="material-symbols-outlined text-[32px] text-on-surface-variant" aria-hidden="true">
-              folder_open
-            </span>
-            <p className="mt-2 font-semibold text-on-surface">{hasFilters ? 'No records match these filters.' : 'No records yet.'}</p>
-            {!hasFilters && (
-              <Link href="/field-entry" className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-lg bg-secondary px-5 font-semibold text-on-secondary">
-                Capture an encounter
-              </Link>
-            )}
+      <section aria-label="Records" className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-[0_1px_2px_rgba(0,29,61,0.04)]">
+        {data.rows.length > 0 && (
+          <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3 md:px-5">
+            <p className="font-semibold text-on-surface">
+              {data.total} record{data.total === 1 ? '' : 's'}
+            </p>
+            <p className="text-[13px] text-on-surface-variant">Select a record to open it</p>
           </div>
+        )}
+        {data.rows.length === 0 ? (
+          hasFilters ? (
+            <EmptyState icon="search_off" title="No records match these filters" action={<Link href="/saved-records" className={btn.outline}>Clear filters</Link>}>
+              Try a wider date range or a different site or status.
+            </EmptyState>
+          ) : (
+            <EmptyState
+              icon="folder_open"
+              title="No records yet"
+              action={
+                <Link href="/field-entry" className={btn.accent}>
+                  <Icon name="add" className="text-[20px]" />
+                  Capture your first encounter
+                </Link>
+              }
+            >
+              Records you capture by typing, voice or upload appear here, with their status.
+            </EmptyState>
+          )
         ) : (
           <>
             {/* Table on larger screens */}
-            <table className="hidden w-full border-collapse text-left md:table">
-              <thead className="bg-surface-container-low">
-                <tr className="border-b border-outline-variant text-[13px] text-on-surface">
-                  <th scope="col" className="px-4 py-3 font-semibold">Record ID</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Date</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Site</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Template</th>
-                  {supervisor && <th scope="col" className="px-4 py-3 font-semibold">Worker</th>}
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant">
-                {data.rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-surface-container-low">
-                    <td className="px-4 py-3">
-                      <Link href={`/records/${r.id}`} className="font-label-status text-[13px] font-semibold text-primary underline-offset-2 hover:underline">
-                        {r.id}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-body-md text-on-surface">{fmtDate(r.encounterDate)}</td>
-                    <td className="px-4 py-3 text-body-md text-on-surface">{r.site}</td>
-                    <td className="px-4 py-3 text-body-md text-on-surface-variant">{r.templateName}</td>
-                    {supervisor && <td className="px-4 py-3 text-body-md text-on-surface">{r.workerName}</td>}
-                    <td className="px-4 py-3">
-                      <StatusBadge status={r.status} />
-                    </td>
+            <div className={`hidden md:block ${table.wrap}`}>
+              <table className={table.table}>
+                <thead className={table.head}>
+                  <tr>
+                    <th scope="col" className={table.th}>Record ID</th>
+                    <th scope="col" className={table.th}>Date</th>
+                    <th scope="col" className={table.th}>Site</th>
+                    <th scope="col" className={table.th}>Template</th>
+                    {supervisor && <th scope="col" className={table.th}>Worker</th>}
+                    <th scope="col" className={table.th}>Status</th>
+                    <th scope="col" className={table.th}>
+                      <span className="sr-only">Open</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.rows.map((r) => (
+                    <tr key={r.id} className={`${table.row} group`}>
+                      <td className={table.td}>
+                        <Link href={`/records/${r.id}`} className="font-label-status text-[13px] font-semibold text-primary underline-offset-2 hover:underline">
+                          {r.id}
+                        </Link>
+                      </td>
+                      <td className={`${table.td} whitespace-nowrap`}>{fmtDate(r.encounterDate)}</td>
+                      <td className={table.td}>{r.site}</td>
+                      <td className={`${table.td} text-on-surface-variant`}>{r.templateName}</td>
+                      {supervisor && <td className={table.td}>{r.workerName}</td>}
+                      <td className={table.td}>
+                        <StatusBadge status={r.status} />
+                      </td>
+                      <td className={`${table.td} w-10 text-right`}>
+                        <Link href={`/records/${r.id}`} aria-label={`Open ${r.id}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant group-hover:bg-surface-container-high group-hover:text-primary">
+                          <Icon name="chevron_right" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Cards on phones */}
             <ul className="divide-y divide-outline-variant md:hidden">
               {data.rows.map((r) => (
                 <li key={r.id}>
-                  <Link href={`/records/${r.id}`} className="block p-4 hover:bg-surface-container-low">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-label-status text-[13px] font-semibold text-primary break-all">{r.id}</span>
-                      <StatusBadge status={r.status} />
+                  <Link href={`/records/${r.id}`} className="flex items-center gap-3 p-4 hover:bg-surface-container-low">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-label-status text-[13px] font-semibold text-primary break-all">{r.id}</span>
+                        <StatusBadge status={r.status} />
+                      </div>
+                      <p className="mt-1 text-body-md text-on-surface">
+                        {r.site} · {fmtDate(r.encounterDate)}
+                      </p>
+                      <p className="text-[13px] text-on-surface-variant">
+                        {r.templateName}
+                        {supervisor ? ` · ${r.workerName}` : ''}
+                      </p>
                     </div>
-                    <p className="mt-1 text-body-md text-on-surface">
-                      {r.site} · {fmtDate(r.encounterDate)}
-                    </p>
-                    <p className="text-[13px] text-on-surface-variant">
-                      {r.templateName}
-                      {supervisor ? ` · ${r.workerName}` : ''}
-                    </p>
+                    <Icon name="chevron_right" className="text-on-surface-variant" />
                   </Link>
                 </li>
               ))}
@@ -225,25 +264,25 @@ export default async function SavedRecordsPage({ searchParams }: { searchParams:
         )}
 
         {data.total > 0 && (
-          <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant px-4 py-3">
+          <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant bg-surface-container-low/50 px-4 py-3 md:px-5">
             <p className="text-body-md text-on-surface-variant">
               Showing <strong className="text-on-surface">{first}</strong>–<strong className="text-on-surface">{last}</strong> of{' '}
               <strong className="text-on-surface">{data.total}</strong>
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {data.page > 1 ? (
-                <Link href={pageHref(filters, data.page - 1)} className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-primary hover:bg-surface-container-high" rel="prev">
-                  <span className="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                <Link href={pageHref(filters, data.page - 1)} className={btn.outline} rel="prev">
+                  <Icon name="chevron_left" />
                   Previous
                 </Link>
               ) : null}
-              <span className="px-2 text-body-md text-on-surface-variant">
+              <span className="px-3 text-body-md text-on-surface-variant">
                 Page {data.page} of {totalPages}
               </span>
               {data.page < totalPages ? (
-                <Link href={pageHref(filters, data.page + 1)} className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-primary hover:bg-surface-container-high" rel="next">
+                <Link href={pageHref(filters, data.page + 1)} className={btn.outline} rel="next">
                   Next
-                  <span className="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                  <Icon name="chevron_right" />
                 </Link>
               ) : null}
             </div>

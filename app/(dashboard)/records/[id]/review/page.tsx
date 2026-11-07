@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
@@ -49,20 +48,11 @@ export default async function ReviewPage({ params }: PageProps<'/records/[id]/re
 
   return (
     <PageShell
-      title="Review"
+      title="Review and sign off"
       width="max-w-[1600px]"
+      back={{ href: `/records/${encodeURIComponent(record.id)}`, label: 'Back to record' }}
       description={`${record.id} · ${record.site}`}
-      actions={
-        <div className="flex items-center gap-2">
-          <StatusBadge status={record.status} />
-          <Link href={`/records/${encodeURIComponent(record.id)}`} className="inline-flex min-h-12 items-center gap-1 rounded-lg px-3 font-semibold text-secondary hover:bg-secondary/10">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              arrow_back
-            </span>
-            Record
-          </Link>
-        </div>
-      }
+      actions={<StatusBadge status={record.status} />}
     >
       {!v ? (
         <ServiceNotice title="Still processing">The draft will appear here when it is ready.</ServiceNotice>
