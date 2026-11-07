@@ -53,7 +53,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.4.5",
     "postcss": "^8.4.38",
-    "postcss-preset-env": "^11.5.0",
+    "postcss-preset-env": "^11.6.2",
     "serwist": "^9.5.13",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
