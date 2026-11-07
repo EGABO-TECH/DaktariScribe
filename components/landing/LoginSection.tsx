@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
+import SecondFactorStep, {
+  clerkErrorMessage,
+  needsCode,
+  startCodeChallenge,
+  type CodeChallenge,
+} from "@/components/auth/SecondFactorStep";
 
 /** Google "G" SVG logo */
 function GoogleLogo() {
@@ -36,17 +42,29 @@ export default function LoginSection() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  
+  const [challenge, setChallenge] = useState<CodeChallenge | null>(null);
+
   const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
 
+  const finishSignIn = async (sessionId: string) => {
+    if (!setActive) return;
+    await setActive({ session: sessionId });
+    router.push("/field-entry");
+  };
+
   const handleGoogleSSO = async () => {
     if (!isLoaded || !signIn) return;
-    await signIn.authenticateWithRedirect({
-      strategy: "oauth_google",
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/field-entry",
-    });
+    setError("");
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/field-entry",
+      });
+    } catch (err: unknown) {
+      setError(clerkErrorMessage(err, "Google sign-in is not available right now. Please use your email instead."));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,17 +80,16 @@ export default function LoginSection() {
         password,
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        router.push("/field-entry");
+      if (result.status === "complete" && result.createdSessionId) {
+        await finishSignIn(result.createdSessionId);
+      } else if (needsCode(result.status)) {
+        // Two-step verification, or a password sign-in from a device Clerk hasn't seen before.
+        setChallenge(await startCodeChallenge(result));
       } else {
-        // Handle incomplete sign-in (requires 2FA, etc.)
-        setError("Additional verification steps are required.");
+        setError("Sign-in could not be completed. Please try again or reset your password.");
       }
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
-      const errorMessage = clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to sign in. Please check your credentials.";
-      setError(errorMessage);
+      setError(clerkErrorMessage(err, "Failed to sign in. Please check your credentials."));
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +145,21 @@ export default function LoginSection() {
             Access your DaktariScribe account to continue.
           </p>
 
+          {challenge && signIn ? (
+            <SecondFactorStep
+              signIn={signIn}
+              challenge={challenge}
+              onComplete={finishSignIn}
+              onCancel={() => {
+                setChallenge(null);
+                setPassword("");
+                setError("");
+              }}
+              inputClassName="ds-input text-center tracking-widest"
+              buttonClassName="btn-ds-primary mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            />
+          ) : (
+          <>
           {/* Google SSO */}
           <button
             id="google-sso-btn"
@@ -264,6 +296,8 @@ export default function LoginSection() {
               )}
             </button>
           </form>
+          </>
+          )}
 
           {/* Register link */}
           <div className="mt-6 text-center">

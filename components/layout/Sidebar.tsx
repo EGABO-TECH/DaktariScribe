@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { usePathname, useRouter } from 'next/navigation';
 import { ADMIN_LINKS, NAV_LINKS, isActive as matchActive, visibleLinks } from './nav-links';
 import { useWorkspaceAccess } from './use-workspace-access';
@@ -11,13 +11,71 @@ import { wipeDevice } from '@/lib/offline/db';
 import { lock } from '@/lib/offline/crypto';
 import { pendingCount } from '@/lib/offline/outbox';
 
+type NavItem = (typeof NAV_LINKS)[number];
+
+const focusRing =
+    'outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed-dim focus-visible:ring-offset-2 focus-visible:ring-offset-nav';
+
+function NavSection({ title, links, pathname }: { title: string; links: NavItem[]; pathname: string }) {
+    if (links.length === 0) return null;
+    const headingId = `nav-${title.toLowerCase().replace(/\s+/g, '-')}`;
+    return (
+        <div>
+            <p id={headingId} className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-on-nav/50">
+                {title}
+            </p>
+            <ul aria-labelledby={headingId} className="space-y-0.5">
+                {links.map(({ href, icon, label, match }) => {
+                    const active = matchActive(pathname, match);
+                    return (
+                        <li key={href}>
+                            <Link
+                                href={href}
+                                aria-current={active ? 'page' : undefined}
+                                className={`group relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors duration-150 ${focusRing} ${
+                                    active
+                                        ? 'bg-white/[0.08] font-semibold text-on-nav'
+                                        : 'font-medium text-on-nav/70 hover:bg-white/[0.04] hover:text-on-nav'
+                                }`}
+                            >
+                                {active && (
+                                    <span aria-hidden="true" className="absolute inset-y-2.5 left-0 w-[3px] rounded-r-full bg-secondary-fixed-dim" />
+                                )}
+                                <span
+                                    aria-hidden="true"
+                                    className={`material-symbols-outlined text-[22px] transition-colors ${
+                                        active ? 'icon-fill text-secondary-fixed-dim' : 'text-on-nav/60 group-hover:text-on-nav/90'
+                                    }`}
+                                >
+                                    {icon}
+                                </span>
+                                <span className="truncate">{label}</span>
+                            </Link>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+}
+
+function initials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    return ((parts[0][0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
 
 export default function Sidebar() {
     const { signOut } = useClerk();
+    const { user, isLoaded } = useUser();
     const pathname = usePathname();
     const router = useRouter();
     const access = useWorkspaceAccess();
-    const links = [...visibleLinks(NAV_LINKS, access), ...visibleLinks(ADMIN_LINKS, access)];
+    const mainLinks = visibleLinks(NAV_LINKS, access);
+    const adminLinks = visibleLinks(ADMIN_LINKS, access);
+
+    const name = user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress || '';
+    const email = user?.primaryEmailAddress?.emailAddress ?? '';
 
     const handleSignOut = async () => {
         // Logging out wipes everything stored on this device (spec Phase 4.3).
@@ -34,64 +92,63 @@ export default function Sidebar() {
     };
 
     return (
-        <nav aria-label="Main" className="hidden lg:flex flex-col h-screen fixed left-0 w-[280px] bg-nav text-on-nav py-stack-lg z-40 transition-all duration-200 ease-in-out border-r border-outline-variant shadow-[4px_0_24px_rgba(0,0,0,0.2)] shrink-0">
-            {/* Profile Header */}
-            <div className="px-6 pb-6 border-b border-on-nav/10">
-                <div className="flex flex-col items-center gap-2">
-                    <div className="flex-shrink-0 bg-white rounded-lg p-1 w-16 h-16 overflow-hidden flex items-center justify-center">
-                        {/* Decorative: the name is written out right below. */}
-                        <Image
-                            src="/assets/DaktariScribe-Favicon.png"
-                            alt=""
-                            width={56}
-                            height={56}
-                            priority
-                            className="object-contain"
-                        />
-                    </div>
-                    <div className="flex flex-col items-center text-center">
-                        <span className="font-bold leading-tight tracking-tight text-on-nav font-display-lg text-[32px]">DaktariScribe</span>
-                        <span className="font-label-status text-secondary-fixed-dim uppercase tracking-wider font-bold text-[12px]">Field Clinical Records</span>
-                    </div>
-                </div>
+        <nav
+            aria-label="Main"
+            className="fixed left-0 z-40 hidden h-screen w-[280px] shrink-0 flex-col border-r border-white/10 bg-nav text-on-nav lg:flex"
+        >
+            {/* Brand */}
+            <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-5">
+                <Link href="/field-entry" className={`flex min-w-0 items-center gap-3 rounded-lg ${focusRing}`}>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5">
+                        <Image src="/assets/DaktariScribe-Favicon.png" alt="" width={40} height={40} priority className="object-contain" />
+                    </span>
+                    <span className="flex min-w-0 flex-col">
+                        <span className="truncate font-display-lg text-[19px] font-bold leading-tight tracking-tight text-on-nav">DaktariScribe</span>
+                        <span className="truncate text-[12px] font-medium text-secondary-fixed-dim">Field Clinical Records</span>
+                    </span>
+                </Link>
             </div>
-            
-            {/* Navigation Links */}
-            <ul className="flex-1 overflow-y-auto pt-4 px-2 space-y-1">
-                {links.map(({ href, icon, label, match }) => {
-                    const isActive = matchActive(pathname, match);
-                    return (
-                        <li key={href} className="relative group">
-                            {isActive && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-secondary-fixed rounded-r-full" />
-                            )}
-                            <Link
-                                className={`flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-200 ${
-                                    isActive
-                                        ? 'bg-secondary/20 text-on-nav'
-                                        : 'text-on-nav/70 hover:text-on-nav hover:bg-white/5'
-                                }`}
-                                href={href}
-                                aria-current={isActive ? 'page' : undefined}
-                            >
-                                <span aria-hidden="true" className={`material-symbols-outlined ${isActive ? 'icon-fill text-secondary-fixed' : ''}`}>{icon}</span>
-                                <span className={`font-body-lg ${isActive ? 'font-semibold' : ''}`}>{label}</span>
-                            </Link>
-                        </li>
-                    );
-                })}
-            </ul>
-            
-            <div className="mt-auto pt-4 px-2 border-t border-on-nav/10">
-                <div className="px-2 pb-6">
-                    <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-4 px-6 py-4 text-on-nav/80 hover:text-on-nav hover:bg-white/10 rounded-xl transition-all duration-200 group"
-                    >
-                        <span aria-hidden="true" className="material-symbols-outlined">logout</span>
-                        <span className="font-body-lg font-medium">Sign out</span>
-                    </button>
+
+            {/* Navigation */}
+            <div className="flex-1 space-y-7 overflow-y-auto px-3 py-6">
+                <NavSection title="Workspace" links={mainLinks} pathname={pathname} />
+                <NavSection title="Administration" links={adminLinks} pathname={pathname} />
+            </div>
+
+            {/* Account */}
+            <div className="shrink-0 border-t border-white/10 p-3">
+                <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-semibold text-on-nav ring-1 ring-white/15">
+                        {isLoaded && user?.imageUrl ? (
+                            <Image src={user.imageUrl} alt="" width={40} height={40} unoptimized className="h-full w-full object-cover" />
+                        ) : (
+                            <span aria-hidden="true">{isLoaded ? initials(name) : ''}</span>
+                        )}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                        {isLoaded ? (
+                            <>
+                                <span className="truncate text-[14px] font-semibold text-on-nav">{name || 'Signed in'}</span>
+                                {email && email !== name && <span className="truncate text-[12px] text-on-nav/60">{email}</span>}
+                            </>
+                        ) : (
+                            <>
+                                <span className="mb-1.5 h-3 w-28 rounded bg-white/10" />
+                                <span className="h-2.5 w-36 rounded bg-white/[0.06]" />
+                            </>
+                        )}
+                    </span>
                 </div>
+                <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className={`mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-on-nav/70 transition-colors duration-150 hover:bg-white/[0.04] hover:text-on-nav ${focusRing}`}
+                >
+                    <span aria-hidden="true" className="material-symbols-outlined text-[22px] text-on-nav/60">
+                        logout
+                    </span>
+                    Sign out
+                </button>
             </div>
         </nav>
     );

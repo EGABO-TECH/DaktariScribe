@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
+import SecondFactorStep, {
+  clerkErrorMessage,
+  needsCode,
+  startCodeChallenge,
+  type CodeChallenge,
+} from "@/components/auth/SecondFactorStep";
 
 export default function ForgotPasswordPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -16,6 +22,13 @@ export default function ForgotPasswordPage() {
   const [successfulCreation, setSuccessfulCreation] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [challenge, setChallenge] = useState<CodeChallenge | null>(null);
+
+  const finishSignIn = async (sessionId: string) => {
+    if (!setActive) return;
+    await setActive({ session: sessionId });
+    router.push("/field-entry");
+  };
 
   const requestPasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +43,7 @@ export default function ForgotPasswordPage() {
 
       setSuccessfulCreation(true);
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
-      setError(clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to initiate password reset");
+      setError(clerkErrorMessage(err, "Failed to initiate password reset"));
     } finally {
       setIsLoading(false);
     }
@@ -49,16 +61,16 @@ export default function ForgotPasswordPage() {
         password,
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        router.push("/field-entry");
+      if (result.status === "complete" && result.createdSessionId) {
+        await finishSignIn(result.createdSessionId);
+      } else if (needsCode(result.status)) {
+        // The new password is saved; two-step verification still has to finish the sign-in.
+        setChallenge(await startCodeChallenge(result));
       } else {
-        setError("Additional verification steps are required.");
+        setError("Your password could not be reset. Please request a new code and try again.");
       }
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: Array<{ longMessage?: string }>; message?: string };
-      const errorMessage = clerkErr.errors?.[0]?.longMessage || clerkErr.message || "Failed to reset password";
-      setError(errorMessage);
+      setError(clerkErrorMessage(err, "Failed to reset password"));
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +112,18 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          {!successfulCreation ? (
+          {challenge && signIn ? (
+            <div className="px-5 sm:px-8 py-7 sm:py-8">
+              <SecondFactorStep
+                signIn={signIn}
+                challenge={challenge}
+                onComplete={finishSignIn}
+                onCancel={() => router.push("/")}
+                inputClassName="reg-input w-full h-[50px] rounded-xl border border-[#d0e8e4] px-4 text-center text-lg tracking-widest outline-none"
+                buttonClassName="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-bold text-[15px] text-white bg-[#0d2240] hover:bg-[#1a3a5c] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              />
+            </div>
+          ) : !successfulCreation ? (
             <form onSubmit={requestPasswordReset} noValidate className="px-5 sm:px-8 py-7 sm:py-8 space-y-7">
               {error && (
                 <div className="p-3 bg-error/10 border border-error/20 text-error rounded-lg text-sm text-center">
