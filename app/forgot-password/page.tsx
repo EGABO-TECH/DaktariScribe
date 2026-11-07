@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
+import { ExistingSessionNotice, useRetryAfterStaleSession } from "@/components/auth/session-recovery";
 import SecondFactorStep, {
   clerkErrorMessage,
   needsCode,
@@ -15,6 +16,7 @@ import SecondFactorStep, {
 export default function ForgotPasswordPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
+  const retryAfterStaleSession = useRetryAfterStaleSession();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,10 +38,12 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setError("");
     try {
-      await signIn.create({
-        strategy: "reset_password_email_code",
-        identifier: email,
-      });
+      await retryAfterStaleSession(() =>
+        signIn.create({
+          strategy: "reset_password_email_code",
+          identifier: email,
+        }),
+      );
 
       setSuccessfulCreation(true);
     } catch (err: unknown) {
@@ -125,6 +129,7 @@ export default function ForgotPasswordPage() {
             </div>
           ) : !successfulCreation ? (
             <form onSubmit={requestPasswordReset} noValidate className="px-5 sm:px-8 py-7 sm:py-8 space-y-7">
+              <ExistingSessionNotice />
               {error && (
                 <div className="p-3 bg-error/10 border border-error/20 text-error rounded-lg text-sm text-center">
                   {error}

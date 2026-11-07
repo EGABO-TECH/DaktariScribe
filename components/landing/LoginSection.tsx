@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
+import { ExistingSessionNotice, useRetryAfterStaleSession } from "@/components/auth/session-recovery";
 import SecondFactorStep, {
   clerkErrorMessage,
   needsCode,
@@ -46,6 +47,7 @@ export default function LoginSection() {
 
   const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
+  const retryAfterStaleSession = useRetryAfterStaleSession();
 
   const finishSignIn = async (sessionId: string) => {
     if (!setActive) return;
@@ -57,11 +59,13 @@ export default function LoginSection() {
     if (!isLoaded || !signIn) return;
     setError("");
     try {
-      await signIn.authenticateWithRedirect({
-        strategy: "oauth_google",
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/field-entry",
-      });
+      await retryAfterStaleSession(() =>
+        signIn.authenticateWithRedirect({
+          strategy: "oauth_google",
+          redirectUrl: "/sso-callback",
+          redirectUrlComplete: "/field-entry",
+        }),
+      );
     } catch (err: unknown) {
       setError(clerkErrorMessage(err, "Google sign-in is not available right now. Please use your email instead."));
     }
@@ -75,10 +79,12 @@ export default function LoginSection() {
     setError("");
 
     try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
+      const result = await retryAfterStaleSession(() =>
+        signIn.create({
+          identifier: email,
+          password,
+        }),
+      );
 
       if (result.status === "complete" && result.createdSessionId) {
         await finishSignIn(result.createdSessionId);
@@ -145,6 +151,7 @@ export default function LoginSection() {
             Access your DaktariScribe account to continue.
           </p>
 
+          <ExistingSessionNotice />
           {challenge && signIn ? (
             <SecondFactorStep
               signIn={signIn}

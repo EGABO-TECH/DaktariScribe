@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { useSignUp } from "@clerk/nextjs/legacy";
 import { useRouter } from "next/navigation";
 import { AlertIcon, ArrowLeftIcon, CheckIcon, EyeIcon, EyeOffIcon, GoogleIcon, Spinner } from "@/components/ui/Icons";
+import { ExistingSessionNotice, useRetryAfterStaleSession } from "@/components/auth/session-recovery";
 
 type FieldKey = "firstName" | "lastName" | "email" | "password" | "confirm" | "terms" | "code";
 type ClerkError = { errors?: Array<{ code?: string; longMessage?: string; message?: string; meta?: { paramName?: string } }>; message?: string };
@@ -123,6 +124,7 @@ export default function RegisterPage() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
   const uid = useId();
+  const retryAfterStaleSession = useRetryAfterStaleSession();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -171,7 +173,7 @@ export default function RegisterPage() {
     if (!isLoaded || !signUp) return notReady();
     setBusy("submit");
     try {
-      await signUp.create({ firstName: firstName.trim(), lastName: lastName.trim(), emailAddress: email.trim(), password });
+      await retryAfterStaleSession(() => signUp.create({ firstName: firstName.trim(), lastName: lastName.trim(), emailAddress: email.trim(), password }));
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
       setResendIn(30);
@@ -189,7 +191,9 @@ export default function RegisterPage() {
     if (!isLoaded || !signUp) return notReady();
     setBusy("google");
     try {
-      await signUp.authenticateWithRedirect({ strategy: "oauth_google", redirectUrl: "/sso-callback", redirectUrlComplete: "/field-entry" });
+      await retryAfterStaleSession(() =>
+        signUp.authenticateWithRedirect({ strategy: "oauth_google", redirectUrl: "/sso-callback", redirectUrlComplete: "/field-entry" }),
+      );
     } catch (err) {
       setGeneral(readClerkError(err, "Google sign-up is not available right now.").general);
       setBusy(false);
@@ -306,6 +310,7 @@ export default function RegisterPage() {
             </p>
           </div>
           <div className="p-6 sm:p-10 lg:p-8">
+          <ExistingSessionNotice />
           {general && (
             <div role="alert" className="mb-5 flex items-start gap-2 rounded-lg border border-error/40 bg-error-container px-3.5 py-3 text-[14px] text-on-error-container">
               <AlertIcon size={18} className="mt-px shrink-0" />
