@@ -471,21 +471,6 @@ body {
   --color-on-error-container: #93000a;
 }
 
-/* ── Workspace switcher trigger: follows the app theme and fits narrow headers ── */
-.ds-workspace-switcher .cl-organizationSwitcherTrigger {
-  min-height: 48px;
-  max-width: 132px;
-}
-.ds-workspace-switcher .cl-organizationSwitcherTrigger,
-.ds-workspace-switcher .cl-organizationSwitcherTrigger * {
-  color: var(--color-on-surface);
-}
-@media (min-width: 640px) {
-  .ds-workspace-switcher .cl-organizationSwitcherTrigger {
-    max-width: 220px;
-  }
-}
-
 /* ── Landing hero (restored design) ───────────────────────── */
 .glass-card {
   background: rgba(13, 34, 64, 0.55);

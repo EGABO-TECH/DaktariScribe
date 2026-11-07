@@ -209,10 +209,12 @@ npm run db:seed      # inserts the global templates
 Roles come from Clerk Organizations. In the [Clerk Dashboard](https://dashboard.clerk.com/):
 
 1. **Enable Organizations** for the application and choose **Membership optional**. The app relies on personal workspaces and has no screens for Clerk's "Membership required" sign-in steps.
-2. **Add a custom role** with the key `supervisor` (Clerk stores it as `org:supervisor`), and add it to the Primary Role Set so it can be assigned. `org:admin` already exists; any other role, such as `org:member`, acts as a worker. In production, custom roles need Clerk's B2B Authentication add-on.
+2. **Add a custom role** with the key `supervisor` (Clerk stores it as `org:supervisor`), and add it to the Primary Role Set so it can be assigned. Give it the **Read members** system permission so supervisors can see the member list. `org:admin` already exists; any other role, such as `org:member`, acts as a worker. In production, custom roles need Clerk's B2B Authentication add-on.
 3. **Add a webhook endpoint** at `https://<your-domain>/api/webhooks/clerk`, subscribed to `organization.created`, `organization.updated`, `organization.deleted`, `organizationMembership.created`, `organizationMembership.updated` and `organizationMembership.deleted`. Put its signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`.
 
 Roles work without the webhook, because access comes from the session token. The webhook keeps organisation names current and team seat counts correct when members leave.
+
+People create and manage organisations in the app's own screens, not Clerk's: the workspace menu in the header, `/organisation`, `/organisation/new` and `/accept-invitation`. Invitation links go to `NEXT_PUBLIC_APP_URL/accept-invitation`, so set that variable correctly in each environment. The invitation email itself comes from Clerk; edit its wording under **Customization → Emails** in the dashboard.
 
 ### 5. Run the Development Server
 

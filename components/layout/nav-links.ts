@@ -1,4 +1,4 @@
-import { canViewAudit, canViewCosts, canViewInsights, type WorkspaceAccess } from '@/lib/roles';
+import { canViewAudit, canViewCosts, canViewInsights, isPersonalOrg, type WorkspaceAccess } from '@/lib/roles';
 
 type NavLink = {
   href: string;
@@ -20,6 +20,7 @@ export const NAV_LINKS: readonly NavLink[] = [
 
 /** In the sidebar and the account menu; the phone's bottom bar has no room for them. */
 export const ADMIN_LINKS: readonly NavLink[] = [
+  { href: '/organisation', icon: 'groups', label: 'Organisation', short: 'Team', match: ['/organisation'], allowed: (a) => !isPersonalOrg(a.orgId) },
   { href: '/admin/audit', icon: 'history', label: 'Audit log', short: 'Audit', match: ['/admin/audit'], allowed: canViewAudit },
   { href: '/admin/costs', icon: 'payments', label: 'Costs', short: 'Costs', match: ['/admin/costs'], allowed: canViewCosts },
 ];

@@ -44,6 +44,29 @@ export function canViewCosts(a: WorkspaceAccess): boolean {
   return a.role === 'admin' || isPersonalOrg(a.orgId);
 }
 
+/** Inviting people, changing roles, renaming and deleting. Clerk also enforces this on its side. */
+export function canManageTeam(a: WorkspaceAccess): boolean {
+  return a.role === 'admin' && !isPersonalOrg(a.orgId);
+}
+
+/** The roles this app understands, in the order they are offered. */
+export const INVITABLE_ROLES = ['org:member', 'org:supervisor', 'org:admin'] as const;
+
+/** What a Clerk role is called in the app. Any role the app doesn't know acts as a worker. */
+export function orgRoleLabel(orgRole: string | null | undefined): string {
+  const labels: Record<Role, string> = { admin: 'Admin', supervisor: 'Supervisor', worker: 'Health worker' };
+  return labels[mapClerkRole(orgRole)];
+}
+
+export function orgRoleHelp(orgRole: string | null | undefined): string {
+  const help: Record<Role, string> = {
+    admin: 'Sees all records, insights, the audit log and costs, and manages the team.',
+    supervisor: 'Sees all records, insights and the audit log.',
+    worker: 'Sees only their own records.',
+  };
+  return help[mapClerkRole(orgRole)];
+}
+
 /**
  * Which organisation to open automatically for someone in their personal workspace. Each
  * organisation opens by itself at most once, so choosing the personal workspace later sticks.

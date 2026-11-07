@@ -4,13 +4,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WebhookEvent } from '@clerk/nextjs/webhooks';
 import { planClerkEvent } from '@/lib/clerk-sync';
 import { isPlaceholderOrgName } from '@/lib/organisations';
-import { canSeeWholeOrg, canViewAudit, canViewCosts, canViewInsights, orgToAutoActivate, workspaceAccess } from '@/lib/roles';
+import { organisationErrorMessage } from '@/lib/organisation-errors';
+import { canManageTeam, canSeeWholeOrg, canViewAudit, canViewCosts, canViewInsights, orgRoleLabel, orgToAutoActivate, workspaceAccess } from '@/lib/roles';
 import { ADMIN_LINKS, NAV_LINKS, visibleLinks } from '@/components/layout/nav-links';
 
-const { applyClerkSyncOp, dbConfigured } = vi.hoisted(() => ({ applyClerkSyncOp: vi.fn(), dbConfigured: vi.fn(() => true) }));
+const { applyClerkSyncOp, dbConfigured, createInvitation, authState } = vi.hoisted(() => ({
+  applyClerkSyncOp: vi.fn(),
+  dbConfigured: vi.fn(() => true),
+  createInvitation: vi.fn(),
+  authState: { value: { userId: 'user_1', orgId: 'org_1', orgRole: 'org:admin' } as { userId: string; orgId: string | null; orgRole: string | null } },
+}));
 
 vi.mock('@/db', async (original) => ({ ...(await original<typeof import('@/db')>()), isDatabaseConfigured: dbConfigured }));
 vi.mock('@/lib/clerk-sync', async (original) => ({ ...(await original<typeof import('@/lib/clerk-sync')>()), applyClerkSyncOp }));
+vi.mock('@/lib/ratelimit', () => ({ limit: vi.fn() }));
+vi.mock('@clerk/nextjs/server', () => ({
+  auth: async () => authState.value,
+  currentUser: async () => null,
+  clerkClient: async () => ({ organizations: { createOrganizationInvitation: createInvitation } }),
+}));
 
 const membershipEvent = (type: string, role = 'org:supervisor') =>
   ({
@@ -59,6 +71,101 @@ describe('workspace access', () => {
     expect(hrefs(admin)).toEqual(expect.arrayContaining(['/insights', '/admin/audit', '/admin/costs']));
     expect(hrefs(personal)).toEqual(expect.arrayContaining(['/admin/audit', '/admin/costs']));
     expect(hrefs(null)).toEqual(['/field-entry', '/saved-records', '/reports', '/billing']);
+  });
+});
+
+describe('team management rules', () => {
+  it('only lets an organisation admin manage the team', () => {
+    expect(canManageTeam(workspaceAccess('user_1', 'org_1', 'org:admin'))).toBe(true);
+    expect(canManageTeam(workspaceAccess('user_1', 'org_1', 'org:supervisor'))).toBe(false);
+    expect(canManageTeam(workspaceAccess('user_1', 'org_1', 'org:member'))).toBe(false);
+    expect(canManageTeam(workspaceAccess('user_1', null, null))).toBe(false);
+  });
+
+  it('names roles the way the app does', () => {
+    expect(orgRoleLabel('org:admin')).toBe('Admin');
+    expect(orgRoleLabel('org:supervisor')).toBe('Supervisor');
+    expect(orgRoleLabel('org:member')).toBe('Health worker');
+    expect(orgRoleLabel('org:anything_else')).toBe('Health worker');
+  });
+
+  it('shows the organisation link only inside an organisation', () => {
+    const hrefs = (a: Parameters<typeof visibleLinks>[1]) => visibleLinks(ADMIN_LINKS, a).map((l) => l.href);
+    expect(hrefs(workspaceAccess('user_1', 'org_1', 'org:member'))).toContain('/organisation');
+    expect(hrefs(workspaceAccess('user_1', null, null))).not.toContain('/organisation');
+  });
+});
+
+describe('organisationErrorMessage', () => {
+  it('uses our wording for known refusals', () => {
+    expect(organisationErrorMessage({ errors: [{ code: 'organization_minimum_permissions_needed', longMessage: 'x' }] }, 'fallback')).toMatch(/at least one admin/);
+  });
+
+  it('uses the message from Clerk for other refusals', () => {
+    expect(organisationErrorMessage({ errors: [{ code: 'other', longMessage: 'Readable reason.' }] }, 'fallback')).toBe('Readable reason.');
+  });
+
+  it('never shows a raw error', () => {
+    expect(organisationErrorMessage(new TypeError('Failed to fetch'), 'fallback')).toBe('fallback');
+    expect(organisationErrorMessage(null, 'fallback')).toBe('fallback');
+  });
+});
+
+describe('POST /api/organisation/invitations', () => {
+  const post = (payload: unknown) => new Request('http://localhost/api/organisation/invitations', { method: 'POST', body: JSON.stringify(payload) });
+  const valid = { emailAddress: 'nurse@example.com', role: 'org:supervisor' };
+
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.example.com');
+    createInvitation.mockReset();
+    authState.value = { userId: 'user_1', orgId: 'org_1', orgRole: 'org:admin' };
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('invites into the active organisation with a link to our own page', async () => {
+    const { POST } = await import('@/app/api/organisation/invitations/route');
+    const res = await POST(post({ ...valid, organizationId: 'org_other' }));
+    expect(res.status).toBe(201);
+    expect(createInvitation).toHaveBeenCalledWith({
+      organizationId: 'org_1',
+      inviterUserId: 'user_1',
+      emailAddress: 'nurse@example.com',
+      role: 'org:supervisor',
+      redirectUrl: 'https://app.example.com/accept-invitation',
+    });
+  });
+
+  it.each([
+    ['a supervisor', { userId: 'user_1', orgId: 'org_1', orgRole: 'org:supervisor' }],
+    ['a health worker', { userId: 'user_1', orgId: 'org_1', orgRole: 'org:member' }],
+    ['someone in a personal workspace', { userId: 'user_1', orgId: null, orgRole: null }],
+  ])('refuses %s', async (_who, state) => {
+    authState.value = state;
+    const { POST } = await import('@/app/api/organisation/invitations/route');
+    expect((await POST(post(valid))).status).toBe(403);
+    expect(createInvitation).not.toHaveBeenCalled();
+  });
+
+  it('rejects roles the app does not offer', async () => {
+    const { POST } = await import('@/app/api/organisation/invitations/route');
+    expect((await POST(post({ ...valid, role: 'org:owner' }))).status).toBe(400);
+    expect(createInvitation).not.toHaveBeenCalled();
+  });
+
+  it('passes on a clear reason when Clerk refuses', async () => {
+    createInvitation.mockRejectedValueOnce({ status: 422, errors: [{ code: 'organization_membership_quota_exceeded' }] });
+    const { POST } = await import('@/app/api/organisation/invitations/route');
+    const res = await POST(post(valid));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toMatch(/member limit/);
+  });
+
+  it('does not leak details when Clerk is unreachable', async () => {
+    createInvitation.mockRejectedValueOnce(new Error('socket hang up'));
+    const { POST } = await import('@/app/api/organisation/invitations/route');
+    const res = await POST(post(valid));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).not.toMatch(/socket/);
   });
 });
 

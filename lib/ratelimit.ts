@@ -40,6 +40,7 @@ export const LIMITS = {
   checkout: [5, 2],
   trial: [3, 1],
   translate: [20, 5],
+  invite: [20, 5],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export function limit(kind: keyof typeof LIMITS, userId: string) {
