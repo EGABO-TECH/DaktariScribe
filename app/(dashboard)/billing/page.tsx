@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import TrialClaim from '@/components/billing/TrialClaim';
 import { Alert, btn, Card, EmptyState, Icon } from '@/components/ui/kit';
+import DownloadButton from '@/components/ui/DownloadButton';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -138,10 +139,9 @@ export default async function BillingPage() {
                       {s.label}
                     </span>
                     {p.status === 'successful' && (
-                      <a href={`/api/billing/receipts/${p.reference}`} className={btn.ghost}>
-                        <Icon name="download" className="text-[20px]" />
+                      <DownloadButton href={`/api/billing/receipts/${p.reference}`} fallbackName="DaktariScribe-receipt.pdf" className={btn.ghost}>
                         Receipt
-                      </a>
+                      </DownloadButton>
                     )}
                   </div>
                 </li>

@@ -17,15 +17,17 @@ type NavItem = (typeof NAV_LINKS)[number];
 const focusRing =
     'outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed-dim focus-visible:ring-offset-2 focus-visible:ring-offset-nav';
 
+const iconBtn = `flex h-10 w-10 items-center justify-center rounded-lg text-on-nav/60 transition-colors duration-150 hover:bg-white/[0.06] hover:text-on-nav outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed-dim`;
+
 function NavSection({ title, links, pathname }: { title: string; links: NavItem[]; pathname: string }) {
     if (links.length === 0) return null;
     const headingId = `nav-${title.toLowerCase().replace(/\s+/g, '-')}`;
     return (
         <div>
-            <p id={headingId} className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-on-nav/50">
+            <p id={headingId} className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-on-nav/50">
                 {title}
             </p>
-            <ul aria-labelledby={headingId} className="space-y-0.5">
+            <ul aria-labelledby={headingId} className="space-y-px">
                 {links.map(({ href, icon, label, match }) => {
                     const active = matchActive(pathname, match);
                     return (
@@ -34,7 +36,7 @@ function NavSection({ title, links, pathname }: { title: string; links: NavItem[
                                 href={href}
                                 aria-current={active ? 'page' : undefined}
                                 data-tour={`nav-${href.slice(1).replace(/\//g, '-')}`}
-                                className={`group relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors duration-150 ${focusRing} ${
+                                className={`group relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors duration-150 [@media(max-height:760px)]:min-h-10 ${focusRing} ${
                                     active
                                         ? 'bg-white/[0.08] font-semibold text-on-nav'
                                         : 'font-medium text-on-nav/70 hover:bg-white/[0.04] hover:text-on-nav'
@@ -100,10 +102,10 @@ export default function Sidebar() {
             className="fixed left-0 z-40 hidden h-screen w-[280px] shrink-0 flex-col border-r border-white/10 bg-nav text-on-nav lg:flex"
         >
             {/* Brand */}
-            <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-5">
+            <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-white/10 px-5">
                 <Link href="/field-entry" className={`flex min-w-0 items-center gap-3 rounded-lg ${focusRing}`}>
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5">
-                        <Image src="/assets/DaktariScribe-Favicon.png" alt="" width={40} height={40} priority className="object-contain" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5">
+                        <Image src="/assets/DaktariScribe-Favicon.png" alt="" width={36} height={36} priority className="object-contain" />
                     </span>
                     <span className="flex min-w-0 flex-col">
                         <span className="truncate font-display-lg text-[19px] font-bold leading-tight tracking-tight text-on-nav">DaktariScribe</span>
@@ -113,17 +115,18 @@ export default function Sidebar() {
             </div>
 
             {/* Navigation */}
-            <div className="flex-1 space-y-7 overflow-y-auto px-3 py-6">
+            {/* Navigation: sized to fit; on very short windows it can still scroll, without a visible bar. */}
+            <div className="no-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-5 [@media(max-height:760px)]:space-y-4 [@media(max-height:760px)]:py-3">
                 <NavSection title="Workspace" links={mainLinks} pathname={pathname} />
                 <NavSection title="Administration" links={adminLinks} pathname={pathname} />
             </div>
 
-            {/* Account */}
-            <div className="shrink-0 border-t border-white/10 p-3">
-                <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-semibold text-on-nav ring-1 ring-white/15">
+            {/* Account: one compact row */}
+            <div className="shrink-0 border-t border-white/10 px-3 py-3">
+                <div className="flex items-center gap-3 rounded-lg pl-2">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[13px] font-semibold text-on-nav ring-1 ring-white/15">
                         {isLoaded && user?.imageUrl ? (
-                            <Image src={user.imageUrl} alt="" width={40} height={40} unoptimized className="h-full w-full object-cover" />
+                            <Image src={user.imageUrl} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" />
                         ) : (
                             <span aria-hidden="true">{isLoaded ? initials(name) : ''}</span>
                         )}
@@ -141,27 +144,19 @@ export default function Sidebar() {
                             </>
                         )}
                     </span>
+                    <div className="flex shrink-0 items-center">
+                        <button type="button" onClick={startTour} aria-label="Take the tour" title="Take the tour" className={iconBtn}>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
+                                tour
+                            </span>
+                        </button>
+                        <button type="button" onClick={handleSignOut} aria-label="Sign out" title="Sign out" className={iconBtn}>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
+                                logout
+                            </span>
+                        </button>
+                    </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={startTour}
-                    className={`mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-on-nav/70 transition-colors duration-150 hover:bg-white/[0.04] hover:text-on-nav ${focusRing}`}
-                >
-                    <span aria-hidden="true" className="material-symbols-outlined text-[22px] text-on-nav/60">
-                        tour
-                    </span>
-                    Take the tour
-                </button>
-                <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className={`mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-on-nav/70 transition-colors duration-150 hover:bg-white/[0.04] hover:text-on-nav ${focusRing}`}
-                >
-                    <span aria-hidden="true" className="material-symbols-outlined text-[22px] text-on-nav/60">
-                        logout
-                    </span>
-                    Sign out
-                </button>
             </div>
         </nav>
     );

@@ -3,6 +3,7 @@ import PageShell from '@/components/layout/PageShell';
 import ServiceNotice from '@/components/layout/ServiceNotice';
 import StatusBadge from '@/components/records/StatusBadge';
 import { btn, Card, EmptyState, Icon, StatTile } from '@/components/ui/kit';
+import DownloadButton from '@/components/ui/DownloadButton';
 import { isDatabaseConfigured } from '@/db';
 import { requireAuth } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -133,12 +134,11 @@ export default async function ReportsPage() {
                             </dd>
                           </div>
                         </dl>
-                        <div className="mt-auto flex gap-2 border-t border-outline-variant p-3">
-                          <a href={`/api/exports/${encodeURIComponent(r.id)}`} className={`${btn.primary} flex-1`}>
-                            <Icon name="picture_as_pdf" />
+                        <div className="mt-auto flex items-start gap-2 border-t border-outline-variant p-3">
+                          <DownloadButton href={`/api/exports/${encodeURIComponent(r.id)}`} fallbackName={`${r.id}.pdf`} icon="picture_as_pdf" className={`${btn.primary} w-full`}>
                             Download PDF
-                          </a>
-                          <Link href={`/records/${r.id}`} aria-label={`Open ${r.id}`} className={`${btn.outline} px-3`}>
+                          </DownloadButton>
+                          <Link href={`/records/${r.id}`} aria-label={`Open ${r.id}`} title="Open record (Word and slide downloads are there too)" className={`${btn.outline} px-3`}>
                             <Icon name="open_in_new" className="text-[20px]" />
                           </Link>
                         </div>

@@ -7,6 +7,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import DownloadButton from '@/components/ui/DownloadButton';
 
 type Product = { code: string; name: string; priceUgx: number; detail: string; perSeat: boolean };
 type Phase = { kind: 'choose' } | { kind: 'waiting'; reference: string; deadline: number } | { kind: 'done'; reference: string } | { kind: 'failed'; message: string };
@@ -97,9 +98,15 @@ export default function BuyFlow({ products, initial }: { products: Product[]; in
         <h2 className="font-headline-sm text-headline-sm">Payment received</h2>
         <p className="mt-1">Your {selected.name.toLowerCase()} is active.</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <a href={`/api/billing/receipts/${phase.reference}`} className="inline-flex min-h-12 items-center rounded-lg bg-secondary px-4 font-semibold text-on-secondary">
-            Download receipt
-          </a>
+          <div className="flex-none">
+            <DownloadButton
+              href={`/api/billing/receipts/${phase.reference}`}
+              fallbackName="DaktariScribe-receipt.pdf"
+              className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-secondary px-4 font-semibold text-on-secondary disabled:opacity-60"
+            >
+              Download receipt
+            </DownloadButton>
+          </div>
           <Link href="/field-entry" className="inline-flex min-h-12 items-center rounded-lg px-4 font-semibold underline">
             Back to Field Entry
           </Link>

@@ -11,14 +11,17 @@ import { recordFromTypedText } from '@/lib/records/refined-record';
 import { toExportRecord } from '@/lib/exports/model';
 import { labelsFor } from '@/lib/i18n/labels';
 import type { RecordDetail } from '@/lib/records/service';
+import { saveBlob } from '@/lib/download';
 
 export default function DraftPdfButton({ draft, templateName }: { draft: Draft; templateName: string }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const tpl = GLOBAL_TEMPLATES.find((t) => t.id === draft.header.templateId) ?? GLOBAL_TEMPLATES[0];
   if (!draft.text.trim()) return null;
 
   const make = async () => {
     setBusy(true);
+    setError('');
     try {
       const [{ pdf }, { ReportPdf, registerReportFonts }] = await Promise.all([import('@react-pdf/renderer'), import('@/components/exports/ReportPdf')]);
       registerReportFonts('/fonts');
@@ -42,24 +45,28 @@ export default function DraftPdfButton({ draft, templateName }: { draft: Draft; 
         signoff: null,
       };
       const doc = { lang: 'eng', labels: labelsFor('eng'), orgName: 'Draft', exportedAt: new Date(), watermark: false, aggregate: false, records: [toExportRecord(detail, 'eng')] };
-      const blob = await pdf(<ReportPdf doc={doc} fontsRegistered />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `draft-${draft.header.encounterDate}.pdf`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      const blob = await pdf(<ReportPdf doc={doc} logoSrc="/assets/report-mark.png" fontsRegistered draft />).toBlob();
+      saveBlob(blob, `draft-${draft.header.encounterDate}.pdf`);
+    } catch {
+      setError('The draft PDF could not be made on this device.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <button type="button" onClick={make} disabled={busy} className="inline-flex min-h-12 items-center gap-2 rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-60">
-      <span className="material-symbols-outlined" aria-hidden="true">
-        picture_as_pdf
-      </span>
-      {busy ? 'Preparing…' : 'Draft PDF'}
-    </button>
+    <span className="inline-flex flex-col items-end">
+      <button type="button" onClick={make} disabled={busy} className="inline-flex min-h-12 items-center gap-2 rounded-lg px-4 font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-60">
+        <span className={`material-symbols-outlined ${busy ? 'animate-spin' : ''}`} aria-hidden="true">
+          {busy ? 'progress_activity' : 'picture_as_pdf'}
+        </span>
+        {busy ? 'Preparing…' : 'Draft PDF'}
+      </button>
+      {error && (
+        <span role="alert" className="text-[12px] font-medium text-error">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }

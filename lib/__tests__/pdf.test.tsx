@@ -31,6 +31,16 @@ const record: RecordDetail = {
   signoff: { signerId: 'user_1', signerName: 'Test Worker', signedAt: new Date('2026-08-01T10:00:00Z'), statement: 'I confirm.' },
 };
 
+describe('ReceiptPdf', () => {
+  it('renders a valid PDF receipt', async () => {
+    const { ReceiptPdf } = await import('@/components/exports/ReceiptPdf');
+    const buf = await renderToBuffer(
+      <ReceiptPdf reference="ref_1234567890abcdef" productName="Weekly pass" amountUgx={2000} paidAt={new Date('2026-08-01T10:00:00Z')} method="mobileMoney" phoneMasked="+256 7•• ••• 123" transactionId="tx_1" />,
+    );
+    expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
+  }, 30_000);
+});
+
 describe('RecordPdf', () => {
   it('renders a valid PDF document', async () => {
     const buf = await renderToBuffer(<RecordPdf record={record} orgName="Test Org" />);

@@ -20,6 +20,7 @@ import { labelFor } from '@/lib/templates/definition';
 import { translateItems, qualityTier } from '@/lib/translate';
 import { recordUsage } from '@/lib/billing/usage';
 import { llmCostMicros } from '@/lib/billing/rates';
+import { logger } from '@/lib/logger';
 import { toExportRecord, type ExportDoc, type MetricSeries, type TranslatedText } from './model';
 
 export const exportScope = z.union([
@@ -169,7 +170,14 @@ export async function buildExportDoc(
   for (const id of ids) details.push(await getRecordDetail(ctx, id));
   const records = [];
   for (const d of details) {
-    const tr = await translatedContent(ctx, d, opts.lang);
+    let tr: Awaited<ReturnType<typeof translatedContent>> = null;
+    try {
+      tr = await translatedContent(ctx, d, opts.lang);
+    } catch (err) {
+      // Never fail the download over translation: keep the original wording and say so.
+      logger.warn('export.translation_failed', { encounterId: d.id, lang: opts.lang, err });
+      tr = { text: {}, note: labelsFor(opts.lang).t('translationUnavailable') };
+    }
     records.push({ ...toExportRecord(d, opts.lang, tr?.text, { includeOriginals: opts.includeOriginals }), translationNote: tr?.note ?? null });
   }
   const aggregate = !('encounterIds' in scope && scope.encounterIds.length === 1);

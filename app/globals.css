@@ -448,6 +448,15 @@ body {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* Scrolls when it must (very short windows) but never shows a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Always-light scope (auth pages match the light landing page) ── */
 .force-light {
   color-scheme: light;
