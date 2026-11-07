@@ -62,7 +62,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "image-size": "^2.0.4",
